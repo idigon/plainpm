@@ -81,16 +81,16 @@ Used in `/my-team` to calculate "days open" for each task.
 - **If uncertain** whether someone is team or external: **ask the user** before proceeding
 - **Completeness over brevity**: meeting notes are the permanent record. Capture all topics discussed, all decisions (with context), all concerns raised, and all open questions. A longer note that misses nothing is always better than a concise one that drops details.
 
-## Year-Based Organization
+## Date-Based Organization
 
-Tasks, meeting notes, meeting transcripts, and reports are organized into year subfolders based on creation date. This keeps folders manageable as projects span multiple years.
+Tasks are organized into **year** subfolders. Meeting notes, transcripts, and reports are organized into **year/month** subfolders. This keeps folders manageable as volume grows.
 
 - Tasks: `tasks/YYYY/TASK-ID.md`
-- Meeting transcripts: `data/meetings/transcripts/YYYY/`
-- Meeting notes: `data/meetings/notes/YYYY/` or `data/projects/<slug>/meetings/YYYY/`
-- Reports: `data/reports/<type>/YYYY/`
+- Meeting transcripts: `data/meetings/transcripts/YYYY/MM/`
+- Meeting notes: `data/meetings/notes/YYYY/MM/` or `data/projects/<slug>/meetings/YYYY/MM/`
+- Reports: `data/reports/<type>/YYYY/MM/`
 
-When creating new files, always place them in the year subfolder matching the current year (or the task's creation date). Dashboard scripts scan all year folders automatically.
+When creating new files, always place them in the correct subfolder matching the current date. Dashboard scripts use `rglob` and scan all subfolders automatically.
 
 ## File Locations
 
@@ -103,9 +103,9 @@ When creating new files, always place them in the year subfolder matching the cu
 | Project-level tasks | `data/projects/<slug>/tasks/YYYY/*.md` |
 | Stream definitions | `data/projects/<slug>/streams/<stream-slug>/stream.md` |
 | Stream tasks | `data/projects/<slug>/streams/<stream-slug>/tasks/YYYY/*.md` |
-| Meeting transcripts | `data/meetings/transcripts/YYYY/` |
-| Processed notes | `data/meetings/notes/YYYY/` or `data/projects/<slug>/meetings/YYYY/` |
-| Dashboard reports | `data/reports/<type>/YYYY/` |
+| Meeting transcripts | `data/meetings/transcripts/YYYY/MM/` |
+| Processed notes | `data/meetings/notes/YYYY/MM/` or `data/projects/<slug>/meetings/YYYY/MM/` |
+| Dashboard reports | `data/reports/<type>/YYYY/MM/` |
 | Slash commands | `.claude/commands/` |
 
 ## Project Slugs
@@ -129,10 +129,10 @@ Every run automatically saves a snapshot to `data/reports/`:
 
 | Command | Saved to | Date key |
 |---------|----------|----------|
-| `today` | `data/reports/daily/YYYY/YYYY-MM-DD.md` | Today |
-| `this_week` | `data/reports/weekly/YYYY/YYYY-MM-DD.md` | Monday of the week |
-| `my_team` | `data/reports/team/YYYY/YYYY-MM-DD.md` | Today |
-| `weekly_report` | `data/reports/weekly-report/YYYY/YYYY-MM-DD.md` | Monday of the week |
+| `today` | `data/reports/daily/YYYY/MM/YYYY-MM-DD.md` | Today |
+| `this_week` | `data/reports/weekly/YYYY/MM/YYYY-MM-DD.md` | Monday of the week |
+| `my_team` | `data/reports/team/YYYY/MM/YYYY-MM-DD.md` | Today |
+| `weekly_report` | `data/reports/weekly-report/YYYY/MM/YYYY-MM-DD.md` | Monday of the week |
 
 Running the same command twice on the same day overwrites the previous snapshot for that date.
 
