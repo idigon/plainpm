@@ -96,13 +96,7 @@ git clone https://github.com/YOUR_USERNAME/plainpm.git
 cd plainpm
 ```
 
-1. **Create the data directory** — run any write command (`/new-task`, `/process-meeting`) and the agent will create `data/` for you, or create it manually:
-
-    ```bash
-    mkdir -p data/projects data/team data/meetings/transcripts data/meetings/notes data/reports
-    ```
-
-2. **Add your team** — create one `.md` file per person in `data/team/`:
+1. **Add your team** — create one `.md` file per person in `data/team/` (see `templates/team-member.md`):
 
     ```yaml
     ---
@@ -111,7 +105,13 @@ cd plainpm
     first_name: Ana
     role: Backend Developer
     ---
+
+    ## Notes
+
+    Any freeform comments about this person.
     ```
+
+2. **Delete the sample data** — remove `data/team/sample-member.md` and the sample project (they exist as examples).
 
 3. **Open in your agent**:
 
