@@ -9,12 +9,12 @@ Optional: a project name or slug. If not provided, show summary for all projects
 ## Instructions
 
 1. Read `CLAUDE.md` for conventions.
-2. Read `projects/_index.md` for the project list.
+2. Read `data/projects/_index.md` for the project list.
 
 ### If a specific project is provided:
 
-3. Read `projects/<slug>/project.md` for overview, goals, key dates.
-4. Scan all streams in `projects/<slug>/streams/*/stream.md`.
+3. Read `data/projects/<slug>/project.md` for overview, goals, key dates.
+4. Scan all streams in `data/projects/<slug>/streams/*/stream.md`.
 5. Scan all tasks across all year subfolders (project-level + all streams).
 6. Generate a detailed report:
 

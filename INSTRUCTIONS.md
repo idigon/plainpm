@@ -30,11 +30,25 @@ Open your AI coding agent from the project root directory so it picks up the con
 - **Windsurf**: open the `plainpm/` folder (reads `.windsurf/rules/plainpm.md`)
 - **Cursor**: open the `plainpm/` folder (reads `.cursor/rules/plainpm.mdc`)
 
+### Data directory setup
+
+All user data lives in the `data/` subdirectory. If it doesn't exist yet, any write command (`/new-task`, `/process-meeting`) will offer to create it for you.
+
+To set it up manually:
+```
+mkdir -p data/projects data/team data/meetings/transcripts data/meetings/notes data/reports
+```
+
+**Privacy options:**
+- **Gitignore** (default) — `data/` is in `.gitignore`, so it won't be pushed to the shared repo. Use a separate backup method.
+- **Git submodule** — Point `data/` to a private repo: `git submodule add <your-private-repo-url> data`
+
 ### First-time setup
 
-1. **Add your team members** — create one file per person in `team/` (see [Managing Team Members](#managing-team-members)). Delete the placeholder `team/sample-member.md`.
-2. **Create your first project** — use the "new task" command or create it manually (see [Managing Projects](#managing-projects)).
-3. **Run the "today" dashboard** to verify everything works.
+1. **Create the data directory** — run any command or create it manually (see above).
+2. **Add your team members** — create one file per person in `data/team/` (see [Managing Team Members](#managing-team-members)).
+3. **Create your first project** — use the "new task" command or create it manually (see [Managing Projects](#managing-projects)).
+4. **Run the "today" dashboard** to verify everything works.
 
 ---
 
@@ -74,8 +88,8 @@ The command will:
 Provide a file path to a `.vtt` transcript or `.md` meeting notes:
 
 ```
-"Process meeting meetings/transcripts/2026/2026-02-19-sprint-review.vtt"
-"Process meeting meetings/notes/2026/draft-kickoff.md"
+"Process meeting data/meetings/transcripts/2026/2026-02-19-sprint-review.vtt"
+"Process meeting data/meetings/notes/2026/draft-kickoff.md"
 ```
 
 The command will:
@@ -105,7 +119,7 @@ The command will:
 1. Choose a slug (lowercase-kebab-case): e.g., `project-alpha`
 2. Create the folder structure:
    ```
-   projects/project-alpha/
+   data/projects/project-alpha/
    ├── project.md
    ├── tasks/
    │   └── 2026/               # Year subfolder for tasks
@@ -136,9 +150,9 @@ The command will:
    - Kickoff: 2026-02-01
    - Target launch: 2026-06-01
    ```
-4. Add an entry to `projects/_index.md`:
+4. Add an entry to `data/projects/_index.md`:
    ```
-   | Project Alpha | active | `projects/project-alpha/` |
+   | Project Alpha | active | `data/projects/project-alpha/` |
    ```
 
 ### Adding links to a project
@@ -156,7 +170,7 @@ Edit `project.md` front matter:
 ```yaml
 status: on-hold
 ```
-Update the status column in `projects/_index.md` to match.
+Update the status column in `data/projects/_index.md` to match.
 
 ### Completing a project
 
@@ -164,7 +178,7 @@ Edit `project.md` front matter:
 ```yaml
 status: completed
 ```
-Update `projects/_index.md`. Completed tasks within the project remain as-is for historical record.
+Update `data/projects/_index.md`. Completed tasks within the project remain as-is for historical record.
 
 ### Archiving a project
 
@@ -179,7 +193,7 @@ There is no archive mechanism — just set status to `completed`. The project fo
 1. Choose a slug: e.g., `backend-api`
 2. Create the folder:
    ```
-   projects/project-alpha/streams/backend-api/
+   data/projects/project-alpha/streams/backend-api/
    ├── stream.md
    └── tasks/
        └── 2026/               # Year subfolder for tasks
@@ -241,8 +255,8 @@ Use the new-task command with a natural language description (see above).
    - Project-level task: `PROJECT-NNN` (e.g., `ALPHA-003`)
 
 2. Create the file in the current year subfolder:
-   - Stream task: `projects/project-alpha/streams/backend-api/tasks/2026/ALPHA-BE-002.md`
-   - Project-level task: `projects/project-alpha/tasks/2026/ALPHA-003.md`
+   - Stream task: `data/projects/project-alpha/streams/backend-api/tasks/2026/ALPHA-BE-002.md`
+   - Project-level task: `data/projects/project-alpha/tasks/2026/ALPHA-003.md`
 
 3. Use this structure:
    ```yaml
@@ -357,7 +371,7 @@ Add dated entries under the `### Updates` section:
 
 If the task came from a meeting, set:
 ```yaml
-source_meeting: meetings/notes/2026/2026-02-19-sprint-review.md
+source_meeting: data/meetings/notes/2026/2026-02-19-sprint-review.md
 ```
 
 This is set automatically by the process-meeting command but can be added manually too.
@@ -368,9 +382,9 @@ This is set automatically by the process-meeting command but can be added manual
 
 ### Adding a team member
 
-Create a file in `team/` named after the person (lowercase-kebab-case):
+Create a file in `data/team/` named after the person (lowercase-kebab-case):
 
-`team/ana-garcia.md`:
+`data/team/ana-garcia.md`:
 ```yaml
 ---
 type: team-member
@@ -384,7 +398,7 @@ The `first_name` is used for matching in natural language commands and as the `o
 
 ### Removing a team member
 
-Delete their file from `team/`. Their existing tasks will remain but won't appear under any team member in the my-team dashboard (they'll show under "Unassigned" unless you reassign them first).
+Delete their file from `data/team/`. Their existing tasks will remain but won't appear under any team member in the my-team dashboard (they'll show under "Unassigned" unless you reassign them first).
 
 **Before removing**, consider reassigning their open tasks:
 1. Search for tasks with `owner: TheirFirstName`
@@ -407,15 +421,15 @@ Create a team file for yourself too. This way, tasks assigned to you show up in 
 
 ### Workflow with transcripts (.vtt)
 
-1. After a meeting, save the `.vtt` transcript to `meetings/transcripts/YYYY/`
+1. After a meeting, save the `.vtt` transcript to `data/meetings/transcripts/YYYY/`
    - Name it descriptively: `2026-02-19-sprint-review.vtt`
-2. Ask your agent to process the meeting: "Process meeting meetings/transcripts/2026/2026-02-19-sprint-review.vtt"
+2. Ask your agent to process the meeting: "Process meeting data/meetings/transcripts/2026/2026-02-19-sprint-review.vtt"
 3. The agent will:
    - Parse the transcript
    - Generate structured notes
    - Identify team members vs. external attendees
    - Create task files for team members' action items (in the current year subfolder)
-   - Save notes to `meetings/notes/YYYY/` or `projects/<slug>/meetings/YYYY/`
+   - Save notes to `data/meetings/notes/YYYY/` or `data/projects/<slug>/meetings/YYYY/`
 4. Review the output and confirm
 
 ### Workflow with manual notes (.md)
@@ -428,7 +442,7 @@ Create a team file for yourself too. This way, tasks assigned to you show up in 
 
 If you prefer to write notes directly in the vault without processing:
 
-`meetings/notes/2026/2026-02-19-sprint-review.md`:
+`data/meetings/notes/2026/2026-02-19-sprint-review.md`:
 ```yaml
 ---
 type: meeting
@@ -461,8 +475,8 @@ Then create the corresponding task files manually if needed.
 
 ### Where meeting notes are saved
 
-- Project-specific meetings: `projects/<slug>/meetings/YYYY/`
-- General / cross-project meetings: `meetings/notes/YYYY/`
+- Project-specific meetings: `data/projects/<slug>/meetings/YYYY/`
+- General / cross-project meetings: `data/meetings/notes/YYYY/`
 
 ---
 
@@ -481,10 +495,10 @@ All four dashboards are script-powered for speed and consistency:
 
 ### Saved snapshots
 
-Every dashboard run saves a snapshot to `reports/`:
+Every dashboard run saves a snapshot to `data/reports/`:
 
 ```
-reports/
+data/reports/
 ├── daily/2026/2026-02-19.md              ← /today
 ├── weekly/2026/2026-02-16.md             ← /this_week (Monday date)
 ├── team/2026/2026-02-19.md               ← /my-team
@@ -495,20 +509,20 @@ Running the same command twice on the same day overwrites that day's snapshot.
 
 ### Viewing historical reports
 
-Browse the `reports/` subfolders to see past snapshots. Compare files across dates to track progress over time.
+Browse the `data/reports/` subfolders to see past snapshots. Compare files across dates to track progress over time.
 
 ### Running dashboards from the terminal
 
 You can run the script directly without any AI agent:
 ```
-cd C:\Users\ignac\Documents\pm-vault
+cd plainpm
 python scripts/dashboard.py today
 python scripts/dashboard.py this_week
 python scripts/dashboard.py my_team
 python scripts/dashboard.py weekly_report
 ```
 
-Output goes to stdout and is saved to `reports/` simultaneously.
+Output goes to stdout and is saved to `data/reports/` simultaneously.
 
 ---
 
@@ -529,7 +543,7 @@ Output goes to stdout and is saved to `reports/` simultaneously.
 
 ### After a meeting
 
-1. Drop the `.vtt` transcript in `meetings/transcripts/YYYY/`
+1. Drop the `.vtt` transcript in `data/meetings/transcripts/YYYY/`
 2. Run the process-meeting command to generate notes and tasks
 3. Review created tasks, adjust priorities/due dates if needed
 
@@ -557,14 +571,14 @@ Output goes to stdout and is saved to `reports/` simultaneously.
 
 ### When someone joins or leaves the team
 
-**Joins**: Create their `team/*.md` file. Assign them tasks via the new-task command or manually.
+**Joins**: Create their `data/team/*.md` file. Assign them tasks via the new-task command or manually.
 
 **Leaves**: Reassign their open tasks first, then delete their team file.
 
 ### Creating a new project with streams from scratch
 
 1. Create the project folder and `project.md` (see [Managing Projects](#managing-projects))
-2. Add it to `projects/_index.md`
+2. Add it to `data/projects/_index.md`
 3. Create stream folders and `stream.md` for each stream (see [Managing Streams](#managing-streams))
 4. Start creating tasks with the new-task command or manually
 
@@ -593,31 +607,32 @@ plainpm/
 ├── .cursor/rules/plainpm.mdc        # Cursor rules
 ├── prompts/commands/                # Shared command prompts (all agents)
 ├── scripts/dashboard.py             # Dashboard generator script
-├── projects/
-│   ├── _index.md                    # Master project list
-│   └── <project-slug>/
-│       ├── project.md
-│       ├── tasks/
-│       │   └── YYYY/               # Tasks grouped by year
-│       ├── streams/
-│       │   └── <stream-slug>/
-│       │       ├── stream.md
-│       │       └── tasks/
-│       │           └── YYYY/        # Stream tasks grouped by year
-│       └── meetings/
-│           └── YYYY/                # Project meeting notes by year
-├── meetings/
-│   ├── transcripts/
-│   │   └── YYYY/                    # Raw .vtt files by year
-│   └── notes/
-│       └── YYYY/                    # General meeting notes by year
-├── team/                            # One .md per team member
 ├── templates/                       # File templates
-└── reports/                         # Dashboard snapshots
-    ├── daily/YYYY/
-    ├── weekly/YYYY/
-    ├── team/YYYY/
-    └── weekly-report/YYYY/
+├── data/                            # User data (gitignored or submodule)
+│   ├── projects/
+│   │   ├── _index.md                # Master project list
+│   │   └── <project-slug>/
+│   │       ├── project.md
+│   │       ├── tasks/
+│   │       │   └── YYYY/            # Tasks grouped by year
+│   │       ├── streams/
+│   │       │   └── <stream-slug>/
+│   │       │       ├── stream.md
+│   │       │       └── tasks/
+│   │       │           └── YYYY/    # Stream tasks grouped by year
+│   │       └── meetings/
+│   │           └── YYYY/            # Project meeting notes by year
+│   ├── meetings/
+│   │   ├── transcripts/
+│   │   │   └── YYYY/                # Raw .vtt files by year
+│   │   └── notes/
+│   │       └── YYYY/                # General meeting notes by year
+│   ├── team/                        # One .md per team member
+│   └── reports/                     # Dashboard snapshots
+│       ├── daily/YYYY/
+│       ├── weekly/YYYY/
+│       ├── team/YYYY/
+│       └── weekly-report/YYYY/
 ```
 
 All tasks, meeting notes, transcripts, and reports are organized into year subfolders (e.g., `2026/`). This keeps folders manageable as projects span multiple years. Dashboard scripts scan all year folders automatically.

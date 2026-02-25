@@ -21,7 +21,8 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 # Resolve vault root (script lives in scripts/)
 VAULT = Path(__file__).resolve().parent.parent
-REPORTS_DIR = VAULT / "reports"
+DATA_DIR = VAULT / "data"
+REPORTS_DIR = DATA_DIR / "reports"
 
 # Map command names to report subdirectories
 REPORT_SUBDIRS = {
@@ -96,7 +97,7 @@ def extract_title(filepath: Path) -> str:
 def load_all_tasks() -> list[dict]:
     """Scan vault for all task files, return list of parsed dicts."""
     tasks = []
-    projects_dir = VAULT / "projects"
+    projects_dir = DATA_DIR / "projects"
     if not projects_dir.exists():
         return tasks
 
@@ -143,7 +144,7 @@ def load_all_tasks() -> list[dict]:
 def load_team() -> dict[str, dict]:
     """Load team members. Returns dict keyed by first_name."""
     team = {}
-    team_dir = VAULT / "team"
+    team_dir = DATA_DIR / "team"
     if not team_dir.exists():
         return team
     for tf in sorted(team_dir.glob("*.md")):
@@ -158,7 +159,7 @@ def load_team() -> dict[str, dict]:
 def load_projects() -> list[dict]:
     """Load all project.md files."""
     projects = []
-    projects_dir = VAULT / "projects"
+    projects_dir = DATA_DIR / "projects"
     if not projects_dir.exists():
         return projects
     for project_dir in sorted(projects_dir.iterdir()):
@@ -176,7 +177,7 @@ def load_projects() -> list[dict]:
 def load_streams(project_slug: str) -> list[dict]:
     """Load all stream.md files for a project."""
     streams = []
-    streams_dir = VAULT / "projects" / project_slug / "streams"
+    streams_dir = DATA_DIR / "projects" / project_slug / "streams"
     if not streams_dir.exists():
         return streams
     for stream_dir in sorted(streams_dir.iterdir()):
@@ -247,14 +248,14 @@ def week_bounds(today: date) -> tuple[date, date]:
 
 def project_display_name(slug: str) -> str:
     """Convert slug to display name."""
-    pf = VAULT / "projects" / slug / "project.md"
+    pf = DATA_DIR / "projects" / slug / "project.md"
     if pf.exists():
         return extract_title(pf)
     return slug.replace("-", " ").title()
 
 
 def stream_display_name(project_slug: str, stream_slug: str) -> str:
-    sf = VAULT / "projects" / project_slug / "streams" / stream_slug / "stream.md"
+    sf = DATA_DIR / "projects" / project_slug / "streams" / stream_slug / "stream.md"
     if sf.exists():
         return extract_title(sf)
     return stream_slug.replace("-", " ").title()
@@ -634,6 +635,25 @@ def main():
     if len(sys.argv) < 2 or sys.argv[1] not in COMMANDS:
         print(f"Usage: python {sys.argv[0]} <{'|'.join(COMMANDS)}>")
         sys.exit(1)
+
+    if not DATA_DIR.exists():
+        print("Error: data/ directory not found.", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("plainpm stores user data (projects, team, meetings, reports) in the data/ directory.", file=sys.stderr)
+        print("Create it with the required structure:", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("  data/", file=sys.stderr)
+        print("  ├── projects/", file=sys.stderr)
+        print("  │   └── _index.md", file=sys.stderr)
+        print("  ├── team/", file=sys.stderr)
+        print("  ├── meetings/", file=sys.stderr)
+        print("  │   ├── transcripts/", file=sys.stderr)
+        print("  │   └── notes/", file=sys.stderr)
+        print("  └── reports/", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("Or use a slash command like /new-task to create it automatically.", file=sys.stderr)
+        sys.exit(1)
+
     run_and_save(sys.argv[1])
 
 
