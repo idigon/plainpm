@@ -65,6 +65,9 @@ Command prompts are in `prompts/commands/`. In Claude Code, these are wired as `
 | new-task | `prompts/commands/new_task.md` | Create a task from natural language |
 | process-meeting | `prompts/commands/process_meeting.md` | Process a .vtt transcript or .md notes into structured notes + tasks |
 | status | `prompts/commands/status.md` | Project status report (one project or all) |
+| done | `prompts/commands/done.md` | Mark task(s) as done |
+| update | `prompts/commands/update.md` | Batch update tasks from natural language |
+| agenda | `prompts/commands/agenda.md` | Generate meeting agenda from open tasks |
 
 ### new-task
 
@@ -105,6 +108,42 @@ The command will:
 "Project status for project-alpha"    # Detailed report for one project
 "Portfolio status"                    # Summary across all projects
 ```
+
+### done
+
+Mark one or more tasks as done in a single command:
+
+```
+"Done ALPHA-BE-001"
+"Mark ALPHA-BE-001 and ALPHA-002 as done"
+"ALPHA-BE-001 done — deployed to production"
+```
+
+The command sets `status: done` and `completed_date` to today. If you include a note, it's appended under `### Updates`.
+
+### update
+
+Batch update tasks from natural language:
+
+```
+"Move ALPHA-BE-001 to in-progress"
+"Reassign ALPHA-002 to Carlos, raise priority to high"
+"Set ALPHA-BE-001 due date to next Friday"
+"ALPHA-BE-001: blocked — waiting on API credentials"
+```
+
+Supports changing `status`, `priority`, `owner`, `due_date`, `tags`, and adding update notes. If anything is ambiguous, the command will ask you to clarify.
+
+### agenda
+
+Generate a meeting agenda from open tasks:
+
+```
+"Generate agenda for project-alpha"
+"Meeting agenda"
+```
+
+Builds sections for blockers, overdue, in-progress, due this week, and new/unassigned tasks. Output is displayed only — not saved automatically.
 
 ---
 
