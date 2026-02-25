@@ -8,8 +8,33 @@ The user provides a file path to a `.vtt` transcript or `.md` meeting notes file
 
 ## Instructions
 
+### Step 0 — Check data directory
+
+Check if the `data/` directory exists. If it does NOT exist, tell the user:
+
+"The `data/` directory doesn't exist yet. This is where plainpm stores your projects, team, meetings, and reports. I'll create it for you."
+
+Then ask for approval and create the directory structure:
+```
+data/
+├── projects/
+│   └── _index.md
+├── team/
+├── meetings/
+│   ├── transcripts/
+│   └── notes/
+└── reports/
+```
+
+Then inform the user:
+"To keep your data private, you have two options:
+1. **Gitignore** (already configured) — `data/` is in `.gitignore`, so it won't be pushed to the shared repo. Use a separate backup method for your data.
+2. **Git submodule** — Point `data/` to a private repo: `git submodule add <your-private-repo-url> data`"
+
+### Step 1 — Read conventions and context
+
 1. Read `CLAUDE.md` for conventions (team roster location, meeting processing rules, external attendee handling).
-2. Read ALL `team/*.md` files to build the team roster (full_name, first_name, role).
+2. Read ALL `data/team/*.md` files to build the team roster (full_name, first_name, role).
 3. Read the provided file.
 
 ### If .vtt file:
@@ -35,7 +60,7 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
 ### For all meetings:
 
 4. **Identify attendees**:
-   - Cross-reference names mentioned with the team roster (`team/*.md`).
+   - Cross-reference names mentioned with the team roster (`data/team/*.md`).
    - Names matching `first_name` or `full_name` → team attendees.
    - Names NOT in the roster → external attendees.
    - **If uncertain** whether someone is team or external: **ask the user before proceeding**.
@@ -47,7 +72,7 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
 6. **Determine project/stream context**:
    - If the meeting is clearly associated with a specific project, ask the user to confirm which project (and stream, if applicable).
    - If the meeting spans multiple projects, ask the user which project each action item belongs to.
-   - If a new project or stream is needed, create it (folder + project.md/stream.md from templates, update `projects/_index.md`).
+   - If a new project or stream is needed, create it (folder + project.md/stream.md from templates, update `data/projects/_index.md`).
 
 7. **Create task files for team members' action items** (including yourself):
    For EACH action item assigned to a team member:
@@ -60,7 +85,7 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
       - `id`: the generated ID
       - `project`: project slug
       - `stream`: stream slug (or empty for project-level)
-      - `owner`: team member's first_name (as it appears in their `team/*.md`)
+      - `owner`: team member's first_name (as it appears in their `data/team/*.md`)
       - `status`: `todo`
       - `priority`: `medium` (unless the meeting context suggests otherwise — e.g., urgent/blocking items → `high` or `critical`)
       - `created`: today's date (YYYY-MM-DD)
@@ -68,14 +93,14 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
       - `tags`: infer from context if obvious, otherwise leave empty
       - Title and description: derived from the action item text
    d. Place the file in the current year subfolder:
-      - Stream task: `projects/<slug>/streams/<stream>/tasks/YYYY/<ID>.md`
-      - Project-level task: `projects/<slug>/tasks/YYYY/<ID>.md`
+      - Stream task: `data/projects/<slug>/streams/<stream>/tasks/YYYY/<ID>.md`
+      - Project-level task: `data/projects/<slug>/tasks/YYYY/<ID>.md`
       - Create directories if they don't exist.
    - Do NOT create task files for external attendees' action items.
 
 8. **Determine meeting notes location**:
-   - If associated with a specific project, ask the user if notes should go in `projects/<slug>/meetings/YYYY/` or `meetings/notes/YYYY/`.
-   - If general/cross-project, save in `meetings/notes/YYYY/`.
+   - If associated with a specific project, ask the user if notes should go in `data/projects/<slug>/meetings/YYYY/` or `data/meetings/notes/YYYY/`.
+   - If general/cross-project, save in `data/meetings/notes/YYYY/`.
    - Filename format: `YYYY-MM-DD-meeting-title.md`
    - Create year subdirectories if they don't exist.
 

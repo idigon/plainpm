@@ -1,10 +1,20 @@
 # PM Vault — Conventions & Configuration
 
+## Data Directory
+
+All user data (projects, team, meetings, reports) lives in the `data/` subdirectory. This separation keeps framework files (scripts, templates, prompts, agent configs) apart from personal data, so the framework repo can be shared on GitHub without exposing private information.
+
+**Setup options:**
+- **Gitignore** (default) — `data/` is listed in `.gitignore`, so it won't be pushed to the shared repo. Use a separate backup method for your data.
+- **Git submodule** — Point `data/` to a private repo: `git submodule add <your-private-repo-url> data`
+
+If `data/` doesn't exist when a command runs, the agent will offer to create the directory structure for you.
+
 ## Team Roster
 
-Team members are defined in `team/*.md` files. Each has `full_name`, `first_name`, and `role` in YAML front matter. Use first names for natural language matching.
+Team members are defined in `data/team/*.md` files. Each has `full_name`, `first_name`, and `role` in YAML front matter. Use first names for natural language matching.
 
-**External people** (clients, vendors, stakeholders not in `team/`) are NOT tracked as task owners. Their action items appear in meeting notes only — never create task files for them.
+**External people** (clients, vendors, stakeholders not in `data/team/`) are NOT tracked as task owners. Their action items appear in meeting notes only — never create task files for them.
 
 ## Tag Taxonomy
 
@@ -63,9 +73,9 @@ Used in `/my-team` to calculate "days open" for each task.
 
 ## Meeting Processing Rules
 
-- `.vtt` files in `meetings/transcripts/` → parse transcript, generate structured notes
+- `.vtt` files in `data/meetings/transcripts/` → parse transcript, generate structured notes
 - `.md` files → process existing manual notes
-- Cross-reference attendees with team roster (`team/*.md`)
+- Cross-reference attendees with team roster (`data/team/*.md`)
 - **Action items**: all listed in a single "Action Items" section (notes are shared with everyone, no team/external split)
 - **Task creation**: only create task files for **team members'** action items — never for external attendees
 - **If uncertain** whether someone is team or external: **ask the user** before proceeding
@@ -76,9 +86,9 @@ Used in `/my-team` to calculate "days open" for each task.
 Tasks, meeting notes, meeting transcripts, and reports are organized into year subfolders based on creation date. This keeps folders manageable as projects span multiple years.
 
 - Tasks: `tasks/YYYY/TASK-ID.md`
-- Meeting transcripts: `meetings/transcripts/YYYY/`
-- Meeting notes: `meetings/notes/YYYY/` or `projects/<slug>/meetings/YYYY/`
-- Reports: `reports/<type>/YYYY/`
+- Meeting transcripts: `data/meetings/transcripts/YYYY/`
+- Meeting notes: `data/meetings/notes/YYYY/` or `data/projects/<slug>/meetings/YYYY/`
+- Reports: `data/reports/<type>/YYYY/`
 
 When creating new files, always place them in the year subfolder matching the current year (or the task's creation date). Dashboard scripts scan all year folders automatically.
 
@@ -87,15 +97,15 @@ When creating new files, always place them in the year subfolder matching the cu
 | Content | Location |
 |---------|----------|
 | Templates | `templates/` |
-| Team members | `team/*.md` |
-| Project index | `projects/_index.md` |
-| Project files | `projects/<slug>/project.md` |
-| Project-level tasks | `projects/<slug>/tasks/YYYY/*.md` |
-| Stream definitions | `projects/<slug>/streams/<stream-slug>/stream.md` |
-| Stream tasks | `projects/<slug>/streams/<stream-slug>/tasks/YYYY/*.md` |
-| Meeting transcripts | `meetings/transcripts/YYYY/` |
-| Processed notes | `meetings/notes/YYYY/` or `projects/<slug>/meetings/YYYY/` |
-| Dashboard reports | `reports/<type>/YYYY/` |
+| Team members | `data/team/*.md` |
+| Project index | `data/projects/_index.md` |
+| Project files | `data/projects/<slug>/project.md` |
+| Project-level tasks | `data/projects/<slug>/tasks/YYYY/*.md` |
+| Stream definitions | `data/projects/<slug>/streams/<stream-slug>/stream.md` |
+| Stream tasks | `data/projects/<slug>/streams/<stream-slug>/tasks/YYYY/*.md` |
+| Meeting transcripts | `data/meetings/transcripts/YYYY/` |
+| Processed notes | `data/meetings/notes/YYYY/` or `data/projects/<slug>/meetings/YYYY/` |
+| Dashboard reports | `data/reports/<type>/YYYY/` |
 | Slash commands | `.claude/commands/` |
 
 ## Project Slugs
@@ -115,14 +125,14 @@ python scripts/dashboard.py weekly_report # Week summary
 
 The slash commands for these dashboards invoke the script and display its output.
 
-Every run automatically saves a snapshot to `reports/`:
+Every run automatically saves a snapshot to `data/reports/`:
 
 | Command | Saved to | Date key |
 |---------|----------|----------|
-| `today` | `reports/daily/YYYY/YYYY-MM-DD.md` | Today |
-| `this_week` | `reports/weekly/YYYY/YYYY-MM-DD.md` | Monday of the week |
-| `my_team` | `reports/team/YYYY/YYYY-MM-DD.md` | Today |
-| `weekly_report` | `reports/weekly-report/YYYY/YYYY-MM-DD.md` | Monday of the week |
+| `today` | `data/reports/daily/YYYY/YYYY-MM-DD.md` | Today |
+| `this_week` | `data/reports/weekly/YYYY/YYYY-MM-DD.md` | Monday of the week |
+| `my_team` | `data/reports/team/YYYY/YYYY-MM-DD.md` | Today |
+| `weekly_report` | `data/reports/weekly-report/YYYY/YYYY-MM-DD.md` | Monday of the week |
 
 Running the same command twice on the same day overwrites the previous snapshot for that date.
 
