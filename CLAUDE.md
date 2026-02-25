@@ -12,7 +12,9 @@ If `data/` doesn't exist when a command runs, the agent will offer to create the
 
 ## Team Roster
 
-Team members are defined in `data/team/*.md` files. Each has `full_name`, `first_name`, and `role` in YAML front matter. Use first names for natural language matching.
+Team members are defined in `data/team/*.md` files (template: `templates/team-member.md`). Each has `full_name`, `first_name`, and `role` in YAML front matter. Use first names for natural language matching.
+
+Below the front matter, a `## Notes` section holds freeform comments about the person — working style, preferences, context, or anything useful to remember.
 
 **External people** (clients, vendors, stakeholders not in `data/team/`) are NOT tracked as task owners. Their action items appear in meeting notes only — never create task files for them.
 
