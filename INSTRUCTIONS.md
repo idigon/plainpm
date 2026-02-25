@@ -382,7 +382,7 @@ This is set automatically by the process-meeting command but can be added manual
 
 ### Adding a team member
 
-Create a file in `data/team/` named after the person (lowercase-kebab-case):
+Create a file in `data/team/` named after the person (lowercase-kebab-case), using the template `templates/team-member.md`:
 
 `data/team/ana-garcia.md`:
 ```yaml
@@ -392,9 +392,16 @@ full_name: Ana Garcia
 first_name: Ana
 role: Backend Developer
 ---
+
+## Notes
+
+Prefers async communication. Expert in Go and PostgreSQL.
+Handles most of the API design work for Project Alpha.
 ```
 
 The `first_name` is used for matching in natural language commands and as the `owner` value in tasks. Keep it unique across the team.
+
+The `## Notes` section is freeform — use it for anything worth remembering about the person: working style, expertise, preferences, availability, etc.
 
 ### Removing a team member
 
