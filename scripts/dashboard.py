@@ -607,7 +607,8 @@ def run_and_save(command_name: str):
 
     subdir = REPORT_SUBDIRS[command_name]
     year = str(file_date.year)
-    report_dir = REPORTS_DIR / subdir / year
+    month = f"{file_date.month:02d}"
+    report_dir = REPORTS_DIR / subdir / year / month
     report_dir.mkdir(parents=True, exist_ok=True)
     report_path = report_dir / f"{file_date}.md"
 
