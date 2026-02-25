@@ -34,6 +34,9 @@ Command prompts are in `prompts/commands/`. When the user asks to run a command,
 | "Create a new task" + description | `prompts/commands/new_task.md` |
 | "Process meeting" + file path | `prompts/commands/process_meeting.md` |
 | "Project status" + optional project | `prompts/commands/status.md` |
+| "Done" + task ID(s) | `prompts/commands/done.md` |
+| "Update" + natural language changes | `prompts/commands/update.md` |
+| "Meeting agenda" or "agenda" + optional project | `prompts/commands/agenda.md` |
 
 ## Key rules
 

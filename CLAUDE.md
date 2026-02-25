@@ -151,6 +151,9 @@ Command prompts live in `prompts/commands/`. Each file contains the full instruc
 | status | `prompts/commands/status.md` | Project status report |
 | my-team | `prompts/commands/my_team.md` | Team workload view |
 | weekly-report | `prompts/commands/weekly_report.md` | Weekly summary |
+| done | `prompts/commands/done.md` | Mark task(s) as done |
+| update | `prompts/commands/update.md` | Batch update tasks from natural language |
+| agenda | `prompts/commands/agenda.md` | Generate meeting agenda from open tasks |
 
 In Claude Code these are also wired as slash commands via `.claude/commands/`.
 
