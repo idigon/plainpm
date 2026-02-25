@@ -88,8 +88,8 @@ The command will:
 Provide a file path to a `.vtt` transcript or `.md` meeting notes:
 
 ```
-"Process meeting data/meetings/transcripts/2026/2026-02-19-sprint-review.vtt"
-"Process meeting data/meetings/notes/2026/draft-kickoff.md"
+"Process meeting data/meetings/transcripts/2026/02/2026-02-19-sprint-review.vtt"
+"Process meeting data/meetings/notes/2026/02/draft-kickoff.md"
 ```
 
 The command will:
@@ -371,7 +371,7 @@ Add dated entries under the `### Updates` section:
 
 If the task came from a meeting, set:
 ```yaml
-source_meeting: data/meetings/notes/2026/2026-02-19-sprint-review.md
+source_meeting: data/meetings/notes/2026/02/2026-02-19-sprint-review.md
 ```
 
 This is set automatically by the process-meeting command but can be added manually too.
@@ -428,15 +428,15 @@ Create a team file for yourself too. This way, tasks assigned to you show up in 
 
 ### Workflow with transcripts (.vtt)
 
-1. After a meeting, save the `.vtt` transcript to `data/meetings/transcripts/YYYY/`
+1. After a meeting, save the `.vtt` transcript to `data/meetings/transcripts/YYYY/MM/`
    - Name it descriptively: `2026-02-19-sprint-review.vtt`
-2. Ask your agent to process the meeting: "Process meeting data/meetings/transcripts/2026/2026-02-19-sprint-review.vtt"
+2. Ask your agent to process the meeting: "Process meeting data/meetings/transcripts/2026/02/2026-02-19-sprint-review.vtt"
 3. The agent will:
    - Parse the transcript
    - Generate structured notes
    - Identify team members vs. external attendees
    - Create task files for team members' action items (in the current year subfolder)
-   - Save notes to `data/meetings/notes/YYYY/` or `data/projects/<slug>/meetings/YYYY/`
+   - Save notes to `data/meetings/notes/YYYY/MM/` or `data/projects/<slug>/meetings/YYYY/MM/`
 4. Review the output and confirm
 
 ### Workflow with manual notes (.md)
@@ -449,7 +449,7 @@ Create a team file for yourself too. This way, tasks assigned to you show up in 
 
 If you prefer to write notes directly in the vault without processing:
 
-`data/meetings/notes/2026/2026-02-19-sprint-review.md`:
+`data/meetings/notes/2026/02/2026-02-19-sprint-review.md`:
 ```yaml
 ---
 type: meeting
@@ -482,8 +482,8 @@ Then create the corresponding task files manually if needed.
 
 ### Where meeting notes are saved
 
-- Project-specific meetings: `data/projects/<slug>/meetings/YYYY/`
-- General / cross-project meetings: `data/meetings/notes/YYYY/`
+- Project-specific meetings: `data/projects/<slug>/meetings/YYYY/MM/`
+- General / cross-project meetings: `data/meetings/notes/YYYY/MM/`
 
 ---
 
@@ -506,10 +506,10 @@ Every dashboard run saves a snapshot to `data/reports/`:
 
 ```
 data/reports/
-├── daily/2026/2026-02-19.md              ← /today
-├── weekly/2026/2026-02-16.md             ← /this_week (Monday date)
-├── team/2026/2026-02-19.md               ← /my-team
-└── weekly-report/2026/2026-02-16.md      ← /weekly-report (Monday date)
+├── daily/2026/02/2026-02-19.md              ← /today
+├── weekly/2026/02/2026-02-16.md             ← /this_week (Monday date)
+├── team/2026/02/2026-02-19.md               ← /my-team
+└── weekly-report/2026/02/2026-02-16.md      ← /weekly-report (Monday date)
 ```
 
 Running the same command twice on the same day overwrites that day's snapshot.
@@ -550,7 +550,7 @@ Output goes to stdout and is saved to `data/reports/` simultaneously.
 
 ### After a meeting
 
-1. Drop the `.vtt` transcript in `data/meetings/transcripts/YYYY/`
+1. Drop the `.vtt` transcript in `data/meetings/transcripts/YYYY/MM/`
 2. Run the process-meeting command to generate notes and tasks
 3. Review created tasks, adjust priorities/due dates if needed
 
@@ -628,21 +628,21 @@ plainpm/
 │   │       │       └── tasks/
 │   │       │           └── YYYY/    # Stream tasks grouped by year
 │   │       └── meetings/
-│   │           └── YYYY/            # Project meeting notes by year
+│   │           └── YYYY/MM/         # Project meeting notes by year/month
 │   ├── meetings/
 │   │   ├── transcripts/
-│   │   │   └── YYYY/                # Raw .vtt files by year
+│   │   │   └── YYYY/MM/             # Raw .vtt files by year/month
 │   │   └── notes/
-│   │       └── YYYY/                # General meeting notes by year
+│   │       └── YYYY/MM/             # General meeting notes by year/month
 │   ├── team/                        # One .md per team member
 │   └── reports/                     # Dashboard snapshots
-│       ├── daily/YYYY/
-│       ├── weekly/YYYY/
-│       ├── team/YYYY/
-│       └── weekly-report/YYYY/
+│       ├── daily/YYYY/MM/
+│       ├── weekly/YYYY/MM/
+│       ├── team/YYYY/MM/
+│       └── weekly-report/YYYY/MM/
 ```
 
-All tasks, meeting notes, transcripts, and reports are organized into year subfolders (e.g., `2026/`). This keeps folders manageable as projects span multiple years. Dashboard scripts scan all year folders automatically.
+Tasks are organized into year subfolders (e.g., `tasks/2026/`). Meeting notes, transcripts, and reports are organized into year/month subfolders (e.g., `2026/02/`) to keep folders manageable at high volume. Dashboard scripts use `rglob` and scan all subfolders automatically.
 
 ### Status values
 
