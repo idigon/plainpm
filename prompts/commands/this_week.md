@@ -10,6 +10,6 @@ python scripts/dashboard.py this_week
 
 Display the full output as-is — it is already formatted as markdown. Do not summarize or modify it.
 
-The script automatically saves a snapshot to `data/reports/weekly/YYYY/YYYY-MM-DD.md` (dated to Monday of the week). Mention the saved file path to the user.
+The script automatically saves a snapshot to `data/reports/weekly/YYYY/MM/YYYY-MM-DD.md` (dated to Monday of the week). Mention the saved file path to the user.
 
 If the output shows no projects, mention that no projects have been created yet.

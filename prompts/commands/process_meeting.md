@@ -99,10 +99,10 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
    - Do NOT create task files for external attendees' action items.
 
 8. **Determine meeting notes location**:
-   - If associated with a specific project, ask the user if notes should go in `data/projects/<slug>/meetings/YYYY/` or `data/meetings/notes/YYYY/`.
-   - If general/cross-project, save in `data/meetings/notes/YYYY/`.
+   - If associated with a specific project, ask the user if notes should go in `data/projects/<slug>/meetings/YYYY/MM/` or `data/meetings/notes/YYYY/MM/`.
+   - If general/cross-project, save in `data/meetings/notes/YYYY/MM/`.
    - Filename format: `YYYY-MM-DD-meeting-title.md`
-   - Create year subdirectories if they don't exist.
+   - Create subdirectories if they don't exist.
 
 9. **Create the meeting notes file** using `templates/meeting-notes.md`:
    - Fill in all YAML front matter fields
