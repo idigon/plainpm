@@ -120,6 +120,7 @@ When creating new files, always place them in the correct subfolder matching the
 | Meeting transcripts | `data/meetings/transcripts/YYYY/MM/` |
 | Processed notes | `data/meetings/notes/YYYY/MM/` or `data/projects/<slug>/meetings/YYYY/MM/` |
 | Dashboard reports | `data/reports/<type>/YYYY/MM/` |
+| Archived tasks | `data/archive/<project-slug>/YYYY/*.md` |
 | Slash commands | `.claude/commands/` |
 
 ## Project Slugs
@@ -166,6 +167,7 @@ Command prompts live in `prompts/commands/`. Each file contains the full instruc
 | done | `prompts/commands/done.md` | Mark task(s) as done |
 | update | `prompts/commands/update.md` | Batch update tasks from natural language |
 | agenda | `prompts/commands/agenda.md` | Generate meeting agenda from open tasks |
+| archive | `prompts/commands/archive.md` | Archive old completed tasks |
 
 In Claude Code these are also wired as slash commands via `.claude/commands/`.
 

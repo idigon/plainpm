@@ -71,6 +71,7 @@ Command prompts are in `prompts/commands/`. In Claude Code, these are wired as `
 | done | `prompts/commands/done.md` | Mark task(s) as done |
 | update | `prompts/commands/update.md` | Batch update tasks from natural language |
 | agenda | `prompts/commands/agenda.md` | Generate meeting agenda from open tasks |
+| archive | `prompts/commands/archive.md` | Archive old completed tasks to `data/archive/` |
 
 ### new-task
 
@@ -225,7 +226,7 @@ Update `data/projects/_index.md`. Completed tasks within the project remain as-i
 
 ### Archiving a project
 
-There is no archive mechanism — just set status to `completed`. The project folder stays in place. Dashboard scripts skip `done` tasks but still list the project.
+Set status to `completed`. The project folder stays in place. Dashboard scripts skip `done` tasks but still list the project. Use the `/archive` command to move old completed tasks to `data/archive/`.
 
 ---
 
@@ -418,6 +419,17 @@ source_meeting: data/meetings/notes/2026/02/2026-02-19-sprint-review.md
 ```
 
 This is set automatically by the process-meeting command but can be added manually too.
+
+### Archiving completed tasks
+
+Use the `/archive` command to move old completed tasks out of the active project folders:
+
+```
+"Archive tasks done more than 30 days ago"
+"Archive project-alpha tasks older than 14 days"
+```
+
+Archived tasks are moved to `data/archive/<project-slug>/YYYY/` (year from `completed_date`). Dashboards only scan `data/projects/`, so archived tasks disappear from all views automatically. The task files are unchanged — you can move them back if needed.
 
 ---
 
