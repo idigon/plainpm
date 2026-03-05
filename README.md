@@ -18,7 +18,7 @@ Works for **individual contributors** tracking their own tasks and for **team le
 
 | Command | What it does |
 |---------|-------------|
-| today | Daily dashboard — overdue, due today, in-progress, blocked |
+| today | Daily dashboard — overdue, due today, in-progress, blocked, not started |
 | this_week | Weekly dashboard — all projects, streams, and tasks |
 | my-team | Team workload with working-days-open per task |
 | weekly-report | Week summary — completed, new, blocked, in-progress |
