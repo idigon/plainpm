@@ -63,7 +63,8 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
    - Cross-reference names mentioned with the team roster (`data/team/*.md`).
    - Names matching `first_name` or `full_name` → team attendees.
    - Names NOT in the roster → external attendees.
-   - **If uncertain** whether someone is team or external: **ask the user before proceeding**.
+   - **Solo mode** (one team member): the user is the only team member. All other attendees are external. No need to ask for classification.
+   - **Team mode** (multiple team members): **if uncertain** whether someone is team or external, **ask the user before proceeding**.
 
 5. **Extract action items**:
    - List ALL action items in a single "Action Items" section (no team/external split — the notes are shared with everyone).
@@ -74,7 +75,7 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
    - If the meeting spans multiple projects, ask the user which project each action item belongs to.
    - If a new project or stream is needed, create it (folder + project.md/stream.md from templates, update `data/projects/_index.md`).
 
-7. **Create task files for team members' action items** (including yourself):
+7. **Create task files for team members' action items** (including yourself — in solo mode, that means only your own action items):
    For EACH action item assigned to a team member:
    a. Determine the target project and stream (from step 6).
    b. Generate the next task ID:
