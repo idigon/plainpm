@@ -12,4 +12,6 @@ Display the full output as-is — it is already formatted as markdown. Do not su
 
 The script automatically saves a snapshot to `data/reports/team/YYYY/MM/YYYY-MM-DD.md`. Mention the saved file path to the user.
 
-If the output shows no tasks, mention that there are no open tasks assigned to any team members.
+If the output shows no tasks:
+- **Solo mode** (one team member): mention that you have no open tasks.
+- **Team mode** (multiple team members): mention that there are no open tasks assigned to any team members.

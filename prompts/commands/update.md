@@ -27,7 +27,7 @@ Extract from the user's input:
 Supported fields:
 - `status`: must be one of `todo`, `in-progress`, `blocked`, `done`
 - `priority`: must be one of `critical`, `high`, `medium`, `low`
-- `owner`: match to a team member's `first_name`
+- `owner`: match to a team member's `first_name`. Self-references ("me", "my", "myself") resolve to the current user — in solo mode (one team member), that's the only person; in team mode, resolve to the member with `self: true`. If no `self: true` exists, ask.
 - `due_date`: parse relative dates ("Friday" -> next Friday, "next week" -> next Monday). Format as YYYY-MM-DD.
 - `tags`: append new tags to existing list (do not remove existing tags)
 - **Update note**: if the user provides context (e.g., "blocked — waiting on X"), add it under `### Updates`
