@@ -4,7 +4,7 @@ A markdown-based project management system powered by AI coding agents. No datab
 
 Works with **Claude Code**, **GitHub Copilot**, **Windsurf**, **Cursor**, or any AI agent that reads project instructions.
 
-Built for lead PMs who track their own and their team's work across multiple long-running projects, each with streams. Meeting transcripts go in, structured notes and tasks come out.
+Works for **individual contributors** tracking their own tasks and for **team leads** managing a group. Meeting transcripts go in, structured notes and tasks come out.
 
 ## Why plain text?
 
@@ -99,24 +99,28 @@ git clone https://github.com/YOUR_USERNAME/plainpm.git
 cd plainpm
 ```
 
-1. **Add your team** — create one `.md` file per person in `data/team/` (see `templates/team-member.md`):
+1. **Add yourself** — create a file in `data/team/` with `self: true` (see `templates/team-member.md`):
 
     ```yaml
     ---
     type: team-member
-    full_name: Ana Garcia
-    first_name: Ana
-    role: Backend Developer
+    full_name: Your Name
+    first_name: YourFirstName
+    role: Your Role
+    self: true
     ---
 
     ## Notes
 
-    Any freeform comments about this person.
     ```
 
-2. **Delete the sample data** — remove `data/team/sample-member.md` and the sample project (they exist as examples).
+    This lets you say "assign to me", "I need to...", or "my task" in commands.
 
-3. **Open in your agent**:
+2. **Add team members** (optional) — create one `.md` file per person in `data/team/` with `self: false`. Skip this for solo use.
+
+3. **Delete the sample data** — remove `data/team/sample-member.md` and the sample project (they exist as examples).
+
+4. **Open in your agent**:
 
     | Agent | How |
     |-------|-----|
@@ -125,13 +129,13 @@ cd plainpm
     | Windsurf | Open folder in Windsurf |
     | Cursor | Open folder in Cursor |
 
-4. **Create your first task**:
+5. **Create your first task**:
 
     ```
-    "Create a new task: Set up CI pipeline for project atlas, high priority, assigned to Ana"
+    "I need to set up CI pipeline for project atlas, high priority"
     ```
 
-5. **Check your dashboard**:
+6. **Check your dashboard**:
 
     ```
     "Run today dashboard"
