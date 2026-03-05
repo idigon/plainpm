@@ -61,7 +61,7 @@ Command prompts are in `prompts/commands/`. In Claude Code, these are wired as `
 
 | Command | Prompt file | What it does |
 |---------|-------------|-------------|
-| today | `prompts/commands/today.md` | Daily dashboard — overdue, due today, in-progress, blocked |
+| today | `prompts/commands/today.md` | Daily dashboard — overdue, due today, in-progress, blocked, not started |
 | this_week | `prompts/commands/this_week.md` | Weekly dashboard — all projects, streams, and tasks in tables |
 | my-team | `prompts/commands/my_team.md` | Team workload — tasks per person with days-open count |
 | weekly-report | `prompts/commands/weekly_report.md` | Week summary — completed, in-progress, blocked, new tasks |
@@ -558,7 +558,7 @@ All four dashboards are script-powered for speed and consistency:
 
 | Command | What it shows |
 |---------|--------------|
-| today | Overdue, due today, in-progress, blocked tasks |
+| today | Overdue, due today, in-progress, blocked, not started tasks |
 | this_week | All projects/streams/tasks in table format |
 | my-team | Tasks grouped by team member with days-open count |
 | weekly-report | Completed, in-progress, blocked, new tasks this week |

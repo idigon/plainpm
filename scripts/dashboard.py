@@ -273,6 +273,7 @@ def cmd_today():
     due_today = []
     in_progress = []
     blocked = []
+    not_started = []
 
     for t in tasks:
         status = (t.get("status") or "").lower()
@@ -288,6 +289,8 @@ def cmd_today():
             in_progress.append(t)
         if status == "blocked":
             blocked.append(t)
+        if status == "todo" and not (due and due < today):
+            not_started.append(t)
 
     print(f"# 📋 Daily Dashboard — {today}")
     print()
@@ -325,6 +328,7 @@ def cmd_today():
     print_section("📅 Due Today", due_today)
     print_section("🔄 In Progress", in_progress)
     print_section("🚫 Blocked", blocked)
+    print_section("📋 Not Started", not_started)
 
 
 # ---------------------------------------------------------------------------
