@@ -50,6 +50,7 @@ Then inform the user:
 - **Priority**: default `medium` unless specified
 - **Due date**: parse relative dates ("Friday" → next Friday, "tomorrow" → tomorrow, "next week" → next Monday). Format as YYYY-MM-DD. Leave empty if not mentioned.
 - **Tags**: extract if mentioned, otherwise leave empty
+- **Blocked by**: if the user mentions dependencies (e.g., "after ALPHA-BE-001", "depends on ALPHA-002", "blocked by ALPHA-001"), add those IDs to the `blocked_by` array. Verify referenced IDs exist.
 
 ### Generate the task:
 
