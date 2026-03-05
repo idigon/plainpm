@@ -46,9 +46,12 @@ mkdir -p data/projects data/team data/meetings/transcripts data/meetings/notes d
 ### First-time setup
 
 1. **Create the data directory** — run any command or create it manually (see above).
-2. **Add your team members** — create one file per person in `data/team/` (see [Managing Team Members](#managing-team-members)).
-3. **Create your first project** — use the "new task" command or create it manually (see [Managing Projects](#managing-projects)).
-4. **Run the "today" dashboard** to verify everything works.
+2. **Add yourself as a team member** — create a file in `data/team/` with your name and role (see [Managing Team Members](#managing-team-members)). This is required even for solo use.
+3. **Add other team members** (optional) — create one file per person in `data/team/`.
+4. **Create your first project** — use the "new task" command or create it manually (see [Managing Projects](#managing-projects)).
+5. **Run the "today" dashboard** to verify everything works.
+
+**Solo vs. team**: plainpm detects the mode automatically. With one team member file (just you), commands like "assign to me" auto-resolve to your name, and all meeting attendees besides you are treated as external.
 
 ---
 
@@ -77,10 +80,11 @@ Describe what you need in plain language. Examples:
 "Ana needs to fix the login bug in project alpha backend by Friday"
 "Create a task for Carlos: review design mockups, high priority, project beta design stream"
 "Update the API docs for project alpha, low priority"
+"I need to review the contract by Monday"   ← self-assignment
 ```
 
 The command will:
-- Match names to team members
+- Match names to team members (including "me"/"my"/"I" → your team profile)
 - Match project/stream names to existing ones
 - Generate the next task ID
 - Create the file in the right location
@@ -419,6 +423,26 @@ This is set automatically by the process-meeting command but can be added manual
 
 ## Managing Team Members
 
+### Adding yourself (required)
+
+Create a file for yourself first — this enables self-assignment ("assign to me", "my task", "I need to...") and ensures your action items from meetings become tasks.
+
+`data/team/your-name.md`:
+```yaml
+---
+type: team-member
+full_name: Your Full Name
+first_name: YourFirstName
+role: Your Role
+self: true
+---
+
+## Notes
+
+```
+
+The `self: true` flag tells plainpm that this is you. When you say "assign to me" or "I need to...", commands resolve to this profile. Only one team member should have `self: true`.
+
 ### Adding a team member
 
 Create a file in `data/team/` named after the person (lowercase-kebab-case), using the template `templates/team-member.md`:
@@ -459,7 +483,7 @@ role: Senior Backend Developer
 
 ### About yourself
 
-Create a team file for yourself too. This way, tasks assigned to you show up in the my-team dashboard and the process-meeting command can create tasks for your action items.
+Your own team file is essential — it enables self-assignment in commands ("me", "my", "I") and ensures your meeting action items become tasks. Set `self: true` in your front matter so plainpm knows which member is you. In solo mode (one team member), "me" auto-resolves regardless of the flag.
 
 ---
 

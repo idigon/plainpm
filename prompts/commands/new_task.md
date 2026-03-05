@@ -8,6 +8,7 @@ The user will provide a description like:
 - "Ana needs to fix the login bug in project alpha backend by Friday"
 - "Add a new task for Carlos: review design mockups, high priority, project beta design stream"
 - "Create a task to update the API docs"
+- "I need to review the contract by Monday" (self-assignment)
 
 ## Instructions
 
@@ -43,7 +44,7 @@ Then inform the user:
 ### Parse from the input:
 - **Title**: concise task title
 - **Description**: fuller description if provided
-- **Owner**: match to a team member by first name; if unclear, ask
+- **Owner**: match to a team member by first name. Self-references ("me", "my", "I", "myself") resolve to the current user — in solo mode (one team member), that's the only person; in team mode, resolve to the member with `self: true`. If no `self: true` exists, ask.
 - **Project**: match to existing project; if unclear or new, ask
 - **Stream**: match to existing stream within the project; if unclear, ask. Leave empty for project-level tasks.
 - **Priority**: default `medium` unless specified

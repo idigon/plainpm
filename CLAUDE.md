@@ -10,11 +10,22 @@ All user data (projects, team, meetings, reports) lives in the `data/` subdirect
 
 If `data/` doesn't exist when a command runs, the agent will offer to create the directory structure for you.
 
+## Solo vs. Team Use
+
+plainpm works for both **individual users** and **team managers**.
+
+- **Solo mode**: only one `data/team/*.md` file exists (yours). When you say "me", "my task", or "assign to me", the agent assigns ownership to your `first_name`. The `/my-team` dashboard shows your personal workload. Meeting attendees who aren't you are external — no task files are created for them.
+- **Team mode**: multiple `data/team/*.md` files exist. Owner matching works by `first_name` across the roster. `/my-team` shows everyone's workload.
+
+The agent detects the mode automatically by counting files in `data/team/`. No configuration needed.
+
 ## Team Roster
 
-Team members are defined in `data/team/*.md` files (template: `templates/team-member.md`). Each has `full_name`, `first_name`, and `role` in YAML front matter. Use first names for natural language matching.
+Team members are defined in `data/team/*.md` files (template: `templates/team-member.md`). Each has `full_name`, `first_name`, and `role` in YAML front matter. Use first names for natural language matching. **Include yourself** — create a file for the main user with `self: true` in the front matter.
 
 Below the front matter, a `## Notes` section holds freeform comments about the person — working style, preferences, context, or anything useful to remember.
+
+**Self-references**: phrases like "me", "my", "myself", "I" in owner context should resolve to the current user. In solo mode, that's the only team member. In team mode, the agent looks for the team member with `self: true` in their front matter. If no member has `self: true`, ask the user to clarify.
 
 **External people** (clients, vendors, stakeholders not in `data/team/`) are NOT tracked as task owners. Their action items appear in meeting notes only — never create task files for them.
 
@@ -80,7 +91,8 @@ Used in `/my-team` to calculate "days open" for each task.
 - Cross-reference attendees with team roster (`data/team/*.md`)
 - **Action items**: all listed in a single "Action Items" section (notes are shared with everyone, no team/external split)
 - **Task creation**: only create task files for **team members'** action items — never for external attendees
-- **If uncertain** whether someone is team or external: **ask the user** before proceeding
+- **Solo mode**: the user is the only team member; all other meeting attendees are external
+- **If uncertain** whether someone is team or external (team mode only): **ask the user** before proceeding
 - **Completeness over brevity**: meeting notes are the permanent record. Capture all topics discussed, all decisions (with context), all concerns raised, and all open questions. A longer note that misses nothing is always better than a concise one that drops details.
 
 ## Date-Based Organization
