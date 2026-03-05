@@ -1,4 +1,4 @@
-# PM Vault — Conventions & Configuration
+# plainpm — Conventions & Configuration
 
 ## Data Directory
 
