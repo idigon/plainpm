@@ -1,4 +1,4 @@
-# PM Vault — Instructions
+# plainpm — Instructions
 
 A complete guide to using your markdown-based project management system. Covers both slash commands (automated) and manual operations.
 
@@ -21,7 +21,7 @@ A complete guide to using your markdown-based project management system. Covers 
 
 ## Getting Started
 
-### Opening the vault
+### Opening plainpm
 
 Open your AI coding agent from the project root directory so it picks up the configuration automatically:
 
@@ -486,7 +486,7 @@ Create a team file for yourself too. This way, tasks assigned to you show up in 
 
 ### Writing meeting notes directly
 
-If you prefer to write notes directly in the vault without processing:
+If you prefer to write notes directly without processing:
 
 `data/meetings/notes/2026/02/2026-02-19-sprint-review.md`:
 ```yaml

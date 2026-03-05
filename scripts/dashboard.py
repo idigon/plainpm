@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PM Vault Dashboard Generator.
+"""plainpm Dashboard Generator.
 
 Usage:
     python scripts/dashboard.py today
@@ -19,9 +19,9 @@ from collections import defaultdict
 # Force UTF-8 output on Windows
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
-# Resolve vault root (script lives in scripts/)
-VAULT = Path(__file__).resolve().parent.parent
-DATA_DIR = VAULT / "data"
+# Resolve project root (script lives in scripts/)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
 REPORTS_DIR = DATA_DIR / "reports"
 
 # Map command names to report subdirectories
@@ -95,7 +95,7 @@ def extract_title(filepath: Path) -> str:
 # ---------------------------------------------------------------------------
 
 def load_all_tasks() -> list[dict]:
-    """Scan vault for all task files, return list of parsed dicts."""
+    """Scan all projects for task files, return list of parsed dicts."""
     tasks = []
     projects_dir = DATA_DIR / "projects"
     if not projects_dir.exists():
@@ -629,7 +629,7 @@ def run_and_save(command_name: str):
     print(output, end="")
 
     # Print save confirmation to stderr (so it doesn't mix with dashboard output)
-    print(f"\n> Saved to {report_path.relative_to(VAULT)}", file=sys.stderr)
+    print(f"\n> Saved to {report_path.relative_to(PROJECT_ROOT)}", file=sys.stderr)
 
 
 def main():
