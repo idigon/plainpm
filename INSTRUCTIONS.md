@@ -350,11 +350,31 @@ Optionally add a note under `### Updates` explaining what's blocking it:
 - 2026-02-19: Blocked — waiting on third-party API credentials from vendor
 ```
 
+### Adding dependencies
+
+Use `blocked_by` to declare that a task depends on other tasks:
+```yaml
+blocked_by: [ALPHA-BE-001, ALPHA-003]
+```
+
+When those tasks are marked done via `/done`, the agent checks if this task is now unblocked and suggests updating its status.
+
+You can also set dependencies via commands:
+```
+"ALPHA-BE-003 is blocked by ALPHA-BE-001"
+"Create a task to deploy frontend, after ALPHA-BE-002"
+```
+
 ### Unblocking a task
 
 Change status back to the appropriate value:
 ```yaml
 status: in-progress    # or: todo
+```
+
+If the task had `blocked_by` entries, they remain in the front matter as a historical record of what the dependency was. You can clear them if you prefer:
+```yaml
+blocked_by: []
 ```
 
 ### Starting work on a task

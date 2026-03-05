@@ -72,6 +72,19 @@ links: [{label: "Jira ticket", url: "https://jira.example.com/ALPHA-123"}, {labe
 
 When rendering links in reports or dashboards, output them as markdown hyperlinks: `[label](url)`.
 
+## Dependencies
+
+Tasks can declare dependencies via a `blocked_by` array of task IDs:
+
+```yaml
+blocked_by: [ALPHA-BE-001, ALPHA-003]
+```
+
+- When all tasks in `blocked_by` are `done`, the dependency is resolved.
+- Setting `blocked_by` on a task does **not** automatically set its status to `blocked` — that's still a manual decision.
+- When `/done` completes a task, it checks if any other open tasks have that ID in `blocked_by`. If a dependency is now fully resolved (all `blocked_by` IDs are done), the agent notifies the user and suggests unblocking.
+- Dashboards show `blocked_by` IDs next to blocked tasks for visibility.
+
 ## Dates
 
 - Format: `YYYY-MM-DD`
