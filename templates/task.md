@@ -10,6 +10,7 @@ due_date:
 created:
 completed_date:
 tags: []
+blocked_by: []
 links: []
 source_meeting:
 ---

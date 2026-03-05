@@ -321,7 +321,9 @@ def cmd_today():
                     tid = t.get("id") or "???"
                     title = t["_title"]
                     owner = t.get("owner") or "Unassigned"
-                    print(f"- {fmt_priority(t)} **{tid}** — {title} | Owner: {owner} | Due: {fmt_due(t)}")
+                    blocked_by = t.get("blocked_by") or []
+                    dep_str = f" | Blocked by: {', '.join(blocked_by)}" if blocked_by else ""
+                    print(f"- {fmt_priority(t)} **{tid}** — {title} | Owner: {owner} | Due: {fmt_due(t)}{dep_str}")
                 print()
 
     print_section("🔴 Overdue", overdue)

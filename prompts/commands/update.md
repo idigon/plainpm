@@ -10,6 +10,8 @@ The user will describe changes in plain language:
 - "Set ALPHA-BE-001 due date to next Friday"
 - "Add tag 'urgent' to ALPHA-BE-001 and ALPHA-002"
 - "ALPHA-BE-001: blocked — waiting on API credentials"
+- "ALPHA-BE-003 is blocked by ALPHA-BE-001"
+- "Remove dependency on ALPHA-001 from ALPHA-BE-003"
 
 ## Instructions
 
@@ -30,6 +32,7 @@ Supported fields:
 - `owner`: match to a team member's `first_name`. Self-references ("me", "my", "myself") resolve to the current user — in solo mode (one team member), that's the only person; in team mode, resolve to the member with `self: true`. If no `self: true` exists, ask.
 - `due_date`: parse relative dates ("Friday" -> next Friday, "next week" -> next Monday). Format as YYYY-MM-DD.
 - `tags`: append new tags to existing list (do not remove existing tags)
+- `blocked_by`: add or remove task IDs from the dependency list. Verify referenced IDs exist before adding. When removing, also check if this resolves all dependencies and suggest unblocking.
 - **Update note**: if the user provides context (e.g., "blocked — waiting on X"), add it under `### Updates`
 
 ### Step 3 — Find and update each task
