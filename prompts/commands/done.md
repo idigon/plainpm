@@ -37,11 +37,19 @@ For each task ID:
      ```
    - If no `### Updates` section exists, create one at the end of the file
 
-### Step 4 — Show summary
+### Step 4 — Check for unblocked tasks
+
+After completing task(s), scan all open tasks for any that have the completed ID(s) in their `blocked_by` array. For each such task:
+- Check if **all** IDs in its `blocked_by` are now `done`.
+- If yes: notify the user that the task is now unblocked and suggest changing its status (e.g., "ALPHA-BE-003 is no longer blocked — move to todo/in-progress?").
+- If no: mention that the task still has other unresolved dependencies.
+
+### Step 5 — Show summary
 
 Show the user a summary of what was updated:
 - If **one task**: show the task ID, title, and completed_date
 - If **multiple tasks**: show a table with columns: ID, Title, Completed Date
+- If any downstream tasks were unblocked, list them
 
 If any task IDs were not found, list them separately with a note.
 

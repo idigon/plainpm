@@ -161,6 +161,7 @@ due_date: 2026-03-15
 created: 2026-02-24
 completed_date:
 tags: [development]
+blocked_by: []
 links: [{label: "Jira ticket", url: "https://jira.example.com/ATLAS-42"}]
 source_meeting:
 ---
@@ -176,6 +177,8 @@ Configure GitHub Actions for the backend API service.
 Status values: `todo` | `in-progress` | `blocked` | `done`
 
 Priority values: `critical` | `high` | `medium` | `low`
+
+Dependencies: use `blocked_by: [TASK-ID, ...]` to declare that a task depends on others. When a blocker is marked done, the agent notifies you about unblocked downstream tasks.
 
 Task IDs: `PROJECT-STREAM-NNN` for stream tasks, `PROJECT-NNN` for project-level tasks.
 
