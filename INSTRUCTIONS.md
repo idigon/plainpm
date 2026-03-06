@@ -12,10 +12,11 @@ A complete guide to using your markdown-based project management system. Covers 
 4. [Managing Streams](#managing-streams)
 5. [Managing Tasks](#managing-tasks)
 6. [Managing Team Members](#managing-team-members)
-7. [Meeting Processing](#meeting-processing)
-8. [Dashboards & Reports](#dashboards--reports)
-9. [Day-to-Day Workflows](#day-to-day-workflows)
-10. [File Reference](#file-reference)
+7. [Meeting Areas](#meeting-areas)
+8. [Meeting Processing](#meeting-processing)
+9. [Dashboards & Reports](#dashboards--reports)
+10. [Day-to-Day Workflows](#day-to-day-workflows)
+11. [File Reference](#file-reference)
 
 ---
 
@@ -519,6 +520,116 @@ Your own team file is essential — it enables self-assignment in commands ("me"
 
 ---
 
+## Meeting Areas
+
+Meeting areas let you group recurring meetings that aren't tied to a specific project — for example, team syncs, partner engagements, 1:1s, all-hands sessions, or vendor calls. Each area is just a folder with an `area.md` definition file. Adding a new area never requires creating a project.
+
+### Creating a new meeting area
+
+1. Choose a slug (lowercase-kebab-case): e.g., `team-syncs`, `partner-engagements`
+2. Create the folder structure:
+   ```
+   data/meetings/areas/team-syncs/
+   ├── area.md
+   └── notes/
+       └── 2026/               # Year/month subfolders for notes
+   ```
+3. Write `area.md` using the template (`templates/area.md`):
+   ```yaml
+   ---
+   type: area
+   slug: team-syncs
+   summary: Weekly team sync meetings
+   created: 2026-03-06
+   ---
+
+   ## Team Syncs
+
+   ### Description
+   Weekly sync with the full team. Covers priorities, blockers, and coordination.
+
+   ### Cadence
+   Every Monday at 10:00 AM
+
+   ### Typical Attendees
+   - Full engineering team
+   ```
+4. Start dropping notes in `data/meetings/areas/team-syncs/notes/YYYY/MM/`.
+
+That's it — no project file, no `_index.md` entry, no task ID prefix needed.
+
+### Suggested areas to start with
+
+| Area slug | What it covers |
+|-----------|---------------|
+| `team-syncs` | Regular team check-ins |
+| `partner-engagements` | External partner or vendor meetings |
+| `one-on-ones` | 1:1s with team members |
+| `all-hands` | Company or department-wide meetings |
+| `stakeholder-reviews` | Steering committee or exec updates |
+
+### Writing notes for an area
+
+Use the standard meeting notes template, and set the `area` field instead of `project`:
+
+```yaml
+---
+type: meeting
+date: 2026-03-06
+area: team-syncs
+project:
+attendees: [Ana, Carlos, You]
+links: []
+source_transcript:
+---
+
+## Team Sync — Mar 6
+
+### Summary
+...
+
+### Decisions
+...
+
+### Action Items
+- **Ana**: Follow up on API rate limits → `ALPHA-BE-005`
+- **Carlos**: Share updated roadmap with stakeholders
+
+### Notes
+...
+```
+
+Save the file to `data/meetings/areas/team-syncs/notes/YYYY/MM/YYYY-MM-DD-meeting-title.md`.
+
+### Processing a meeting in an area
+
+When running the `process-meeting` command, tell the agent which area the meeting belongs to:
+
+```
+"Process meeting data/meetings/transcripts/2026/03/2026-03-06-team-sync.vtt — this is a team sync"
+"Process meeting path/to/notes.md, area: partner-engagements"
+```
+
+The agent will:
+- Save the structured notes to `data/meetings/areas/<area-slug>/notes/YYYY/MM/`
+- Create task files for team members' action items (same rules as any meeting)
+- Set the `area` field in the meeting notes front matter
+
+### Listing your areas
+
+Browse `data/meetings/areas/` to see all defined areas. Each subfolder has an `area.md` with its description and cadence.
+
+### Searching across an area
+
+Ask your agent directly:
+- "Find all team sync notes from February"
+- "What decisions were made in partner engagement meetings this quarter?"
+- "Show action items from team syncs in January"
+
+The agent will scan the area's notes folder and answer.
+
+---
+
 ## Meeting Processing
 
 ### Workflow with transcripts (.vtt)
@@ -577,6 +688,7 @@ Then create the corresponding task files manually if needed.
 
 ### Where meeting notes are saved
 
+- Area meetings: `data/meetings/areas/<area-slug>/notes/YYYY/MM/`
 - Project-specific meetings: `data/projects/<slug>/meetings/YYYY/MM/`
 - General / cross-project meetings: `data/meetings/notes/YYYY/MM/`
 
@@ -727,8 +839,13 @@ plainpm/
 │   ├── meetings/
 │   │   ├── transcripts/
 │   │   │   └── YYYY/MM/             # Raw .vtt files by year/month
-│   │   └── notes/
-│   │       └── YYYY/MM/             # General meeting notes by year/month
+│   │   ├── notes/
+│   │   │   └── YYYY/MM/             # General meeting notes by year/month
+│   │   └── areas/
+│   │       └── <area-slug>/         # One folder per meeting area
+│   │           ├── area.md          # Area definition (from templates/area.md)
+│   │           └── notes/
+│   │               └── YYYY/MM/     # Area meeting notes by year/month
 │   ├── team/                        # One .md per team member
 │   └── reports/                     # Dashboard snapshots
 │       ├── daily/YYYY/MM/
