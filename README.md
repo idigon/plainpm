@@ -71,6 +71,8 @@ plainpm/
 │   │       │       ├── stream.md
 │   │       │       └── tasks/YYYY/
 │   │       └── meetings/YYYY/MM/
+│   ├── tasks/                       # Standalone tasks (no project)
+│   │   └── YYYY/
 │   ├── meetings/
 │   │   ├── transcripts/YYYY/MM/     # Drop .vtt files here
 │   │   ├── notes/YYYY/MM/           # General meeting notes

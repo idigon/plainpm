@@ -23,10 +23,12 @@ Then ask for approval and create the directory structure:
 data/
 ├── projects/
 │   └── _index.md
+├── tasks/
 ├── team/
 ├── meetings/
 │   ├── transcripts/
-│   └── notes/
+│   ├── notes/
+│   └── areas/
 └── reports/
 ```
 
@@ -45,8 +47,8 @@ Then inform the user:
 - **Title**: concise task title
 - **Description**: fuller description if provided
 - **Owner**: match to a team member by first name. Self-references ("me", "my", "I", "myself") resolve to the current user — in solo mode (one team member), that's the only person; in team mode, resolve to the member with `self: true`. If no `self: true` exists, ask.
-- **Project**: match to existing project; if unclear or new, ask
-- **Stream**: match to existing stream within the project; if unclear, ask. Leave empty for project-level tasks.
+- **Project**: match to existing project; if unclear or new, ask. If the task doesn't belong to any project (e.g., from an area meeting or a personal to-do), it's a **standalone task** — leave project empty.
+- **Stream**: match to existing stream within the project; if unclear, ask. Leave empty for project-level or standalone tasks.
 - **Priority**: default `medium` unless specified
 - **Due date**: parse relative dates ("Friday" → next Friday, "tomorrow" → tomorrow, "next week" → next Monday). Format as YYYY-MM-DD. Leave empty if not mentioned.
 - **Tags**: extract if mentioned, otherwise leave empty
@@ -55,8 +57,9 @@ Then inform the user:
 ### Generate the task:
 
 4. Determine the next task ID:
-   - For stream tasks: scan ALL year folders under `data/projects/<slug>/streams/<stream>/tasks/` for existing IDs, increment from the highest found across all years
-   - For project-level tasks: scan ALL year folders under `data/projects/<slug>/tasks/` for existing IDs, increment from the highest found across all years
+   - For stream tasks: scan ALL year folders under `data/projects/<slug>/streams/<stream>/tasks/` for existing IDs, increment from the highest found across all years. ID format: `PROJECT-STREAM-NNN`.
+   - For project-level tasks: scan ALL year folders under `data/projects/<slug>/tasks/` for existing IDs, increment from the highest found across all years. ID format: `PROJECT-NNN`.
+   - For standalone tasks: scan ALL year folders under `data/tasks/` for existing IDs, increment from the highest found across all years. ID format: `TASK-NNN`.
    - Stream abbreviation: derive from stream folder name (e.g., `backend-api` → `BE`, `design` → `DES`, `frontend` → `FE`). Use first letters of each word, uppercase, 2-4 chars.
 
 5. Create necessary directories if they don't exist (project folder, tasks/YYYY folder, stream folder).
@@ -70,6 +73,7 @@ Then inform the user:
    - Place file in the year subfolder: `tasks/YYYY/TASK-ID.md` (where YYYY is the current year)
    - Stream task path: `data/projects/<slug>/streams/<stream>/tasks/YYYY/TASK-ID.md`
    - Project-level task path: `data/projects/<slug>/tasks/YYYY/TASK-ID.md`
+   - Standalone task path: `data/tasks/YYYY/TASK-ID.md`
 
 8. Show the user the created task with its full details and file path.
 

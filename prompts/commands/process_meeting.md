@@ -19,6 +19,7 @@ Then ask for approval and create the directory structure:
 data/
 ├── projects/
 │   └── _index.md
+├── tasks/
 ├── team/
 ├── meetings/
 │   ├── transcripts/
@@ -82,15 +83,16 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
 
 7. **Create task files for team members' action items** (including yourself — in solo mode, that means only your own action items):
    For EACH action item assigned to a team member:
-   a. Determine the target project and stream (from step 6).
+   a. Determine the target project and stream (from step 6). If the action item doesn't belong to any project (common for area meetings), it becomes a **standalone task**.
    b. Generate the next task ID:
       - Scan ALL year folders under the target tasks directory to find the highest NNN across all years.
       - Stream tasks: `PROJECT-STREAM-NNN` (e.g., `ALPHA-BE-002`). Stream abbreviation = uppercase first letters of each word in stream folder name, 2-4 chars.
       - Project-level tasks: `PROJECT-NNN` (e.g., `ALPHA-003`).
+      - Standalone tasks: `TASK-NNN` (e.g., `TASK-001`). Scan `data/tasks/` for existing IDs.
    c. Create the task `.md` file using `templates/task.md`:
       - `id`: the generated ID
-      - `project`: project slug
-      - `stream`: stream slug (or empty for project-level)
+      - `project`: project slug (or empty for standalone tasks)
+      - `stream`: stream slug (or empty for project-level/standalone)
       - `owner`: team member's first_name (as it appears in their `data/team/*.md`)
       - `status`: `todo`
       - `priority`: `medium` (unless the meeting context suggests otherwise — e.g., urgent/blocking items → `high` or `critical`)
@@ -101,6 +103,7 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
    d. Place the file in the current year subfolder:
       - Stream task: `data/projects/<slug>/streams/<stream>/tasks/YYYY/<ID>.md`
       - Project-level task: `data/projects/<slug>/tasks/YYYY/<ID>.md`
+      - Standalone task: `data/tasks/YYYY/<ID>.md`
       - Create directories if they don't exist.
    - Do NOT create task files for external attendees' action items.
 
