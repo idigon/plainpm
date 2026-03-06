@@ -298,10 +298,12 @@ Use the new-task command with a natural language description (see above).
    - Increment the highest NNN by 1, zero-padded to 3 digits
    - Stream task: `PROJECT-STREAM-NNN` (e.g., `ALPHA-BE-002`)
    - Project-level task: `PROJECT-NNN` (e.g., `ALPHA-003`)
+   - Standalone task: `TASK-NNN` (e.g., `TASK-001`) — for tasks not tied to any project
 
 2. Create the file in the current year subfolder:
    - Stream task: `data/projects/project-alpha/streams/backend-api/tasks/2026/ALPHA-BE-002.md`
    - Project-level task: `data/projects/project-alpha/tasks/2026/ALPHA-003.md`
+   - Standalone task: `data/tasks/2026/TASK-001.md`
 
 3. Use this structure:
    ```yaml
@@ -836,6 +838,8 @@ plainpm/
 │   │       │           └── YYYY/    # Stream tasks grouped by year
 │   │       └── meetings/
 │   │           └── YYYY/MM/         # Project meeting notes by year/month
+│   ├── tasks/                       # Standalone tasks (not tied to any project)
+│   │   └── YYYY/                    # Grouped by year
 │   ├── meetings/
 │   │   ├── transcripts/
 │   │   │   └── YYYY/MM/             # Raw .vtt files by year/month
@@ -879,7 +883,9 @@ Tasks are organized into year subfolders (e.g., `tasks/2026/`). Meeting notes, t
 |-------|--------|---------|
 | Stream task | `PROJECT-STREAM-NNN` | `ALPHA-BE-001` |
 | Project-level task | `PROJECT-NNN` | `ALPHA-001` |
+| Standalone task | `TASK-NNN` | `TASK-001` |
 
 - `PROJECT`: uppercase project abbreviation derived from slug
 - `STREAM`: 2-4 char uppercase abbreviation from stream folder name
+- `TASK`: literal prefix for standalone tasks (not tied to any project)
 - `NNN`: zero-padded, auto-incremented per scope

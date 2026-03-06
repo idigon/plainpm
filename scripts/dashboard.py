@@ -122,8 +122,23 @@ def extract_latest_update(filepath: Path) -> str | None:
 # ---------------------------------------------------------------------------
 
 def load_all_tasks() -> list[dict]:
-    """Scan all projects for task files, return list of parsed dicts."""
+    """Scan all projects and standalone tasks, return list of parsed dicts."""
     tasks = []
+
+    # Standalone tasks (not tied to any project)
+    standalone_dir = DATA_DIR / "tasks"
+    if standalone_dir.exists():
+        for tf in sorted(standalone_dir.rglob("*.md")):
+            fm = parse_front_matter(tf)
+            if fm.get("type") != "task":
+                continue
+            fm["_file"] = tf
+            fm["_title"] = extract_title(tf)
+            fm.setdefault("project", None)
+            fm.setdefault("stream", None)
+            tasks.append(fm)
+
+    # Project and stream tasks
     projects_dir = DATA_DIR / "projects"
     if not projects_dir.exists():
         return tasks
@@ -291,6 +306,8 @@ def week_bounds(today: date) -> tuple[date, date]:
 
 def project_display_name(slug: str) -> str:
     """Convert slug to display name."""
+    if not slug:
+        return "(Standalone)"
     pf = DATA_DIR / "projects" / slug / "project.md"
     if pf.exists():
         return extract_title(pf)
@@ -298,6 +315,8 @@ def project_display_name(slug: str) -> str:
 
 
 def stream_display_name(project_slug: str, stream_slug: str) -> str:
+    if not project_slug:
+        return stream_slug.replace("-", " ").title() if stream_slug else ""
     sf = DATA_DIR / "projects" / project_slug / "streams" / stream_slug / "stream.md"
     if sf.exists():
         return extract_title(sf)
@@ -349,14 +368,14 @@ def cmd_today():
         # Group by project -> stream
         grouped = defaultdict(lambda: defaultdict(list))
         for t in items:
-            proj = t.get("project") or "Unknown"
+            proj = t.get("project") or ""
             stream = t.get("stream") or "(Project-level)"
             grouped[proj][stream].append(t)
 
         for proj in sorted(grouped):
             print(f"### {project_display_name(proj)}")
             for stream in sorted(grouped[proj]):
-                if stream != "(Project-level)":
+                if stream != "(Project-level)" and proj:
                     sf = DATA_DIR / "projects" / proj / "streams" / stream / "stream.md"
                     sfm = parse_front_matter(sf) if sf.exists() else {}
                     sstatus = sfm.get("status") or "active"
@@ -735,6 +754,7 @@ def main():
         print("  data/", file=sys.stderr)
         print("  ├── projects/", file=sys.stderr)
         print("  │   └── _index.md", file=sys.stderr)
+        print("  ├── tasks/", file=sys.stderr)
         print("  ├── team/", file=sys.stderr)
         print("  ├── meetings/", file=sys.stderr)
         print("  │   ├── transcripts/", file=sys.stderr)
