@@ -42,7 +42,7 @@ mkdir -p data/projects data/team data/meetings/transcripts data/meetings/notes d
 
 **Privacy options:**
 - **Gitignore** (default) — `data/` is in `.gitignore`, so it won't be pushed to the shared repo. Use a separate backup method.
-- **Git submodule** — Point `data/` to a private repo: `git submodule add <your-private-repo-url> data`
+- **Private repo** — Clone a private repo into `data/` manually: `git clone <your-private-repo-url> data`. Since `data/` is gitignored, the URL is never exposed in the public repo.
 
 ### First-time setup
 
@@ -824,7 +824,7 @@ plainpm/
 ├── prompts/commands/                # Shared command prompts (all agents)
 ├── scripts/dashboard.py             # Dashboard generator script
 ├── templates/                       # File templates
-├── data/                            # User data (gitignored or submodule)
+├── data/                            # User data (gitignored, or separate private repo)
 │   ├── projects/
 │   │   ├── _index.md                # Master project list
 │   │   └── <project-slug>/

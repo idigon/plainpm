@@ -35,7 +35,7 @@ data/
 Then inform the user:
 "To keep your data private, you have two options:
 1. **Gitignore** (already configured) — `data/` is in `.gitignore`, so it won't be pushed to the shared repo. Use a separate backup method for your data.
-2. **Git submodule** — Point `data/` to a private repo: `git submodule add <your-private-repo-url> data`"
+2. **Private repo** — Clone a private repo into `data/` manually: `git clone <your-private-repo-url> data`. The URL stays local since `data/` is gitignored."
 
 ### Step 1 — Read conventions and context
 

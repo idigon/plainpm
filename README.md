@@ -60,7 +60,7 @@ plainpm/
 ├── prompts/commands/                # Shared command prompts (all agents)
 ├── scripts/dashboard.py             # Dashboard generator (Python 3, stdlib only)
 ├── templates/                       # File templates
-├── data/                            # User data (gitignored or submodule)
+├── data/                            # User data (gitignored, or separate private repo)
 │   ├── projects/
 │   │   ├── _index.md                # Master project list
 │   │   └── <project>/
@@ -92,7 +92,7 @@ plainpm/
 
 Tasks are organized into year subfolders. Meetings and reports use year/month subfolders to keep folders manageable at high volume.
 
-The `data/` directory is gitignored by default, so you can share the framework repo without exposing personal data. For private backup, you can point `data/` to a separate private repo via git submodule.
+The `data/` directory is gitignored by default, so you can share the framework repo without exposing personal data. For private backup, you can clone a separate private repo into `data/` manually (`git clone <your-private-repo-url> data`).
 
 ## Quick start
 

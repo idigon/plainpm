@@ -6,7 +6,7 @@ All user data (projects, team, meetings, reports) lives in the `data/` subdirect
 
 **Setup options:**
 - **Gitignore** (default) — `data/` is listed in `.gitignore`, so it won't be pushed to the shared repo. Use a separate backup method for your data.
-- **Git submodule** — Point `data/` to a private repo: `git submodule add <your-private-repo-url> data`
+- **Private repo** — Clone a private repo into `data/` manually: `git clone <your-private-repo-url> data`. Since `data/` is gitignored, the URL is never exposed in the public repo. Do **not** use `git submodule` — that would leak the private repo URL in `.gitmodules`.
 
 If `data/` doesn't exist when a command runs, the agent will offer to create the directory structure for you.
 
