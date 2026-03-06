@@ -73,7 +73,11 @@ plainpm/
 │   │       └── meetings/YYYY/MM/
 │   ├── meetings/
 │   │   ├── transcripts/YYYY/MM/     # Drop .vtt files here
-│   │   └── notes/YYYY/MM/           # Processed meeting notes
+│   │   ├── notes/YYYY/MM/           # General meeting notes
+│   │   └── areas/
+│   │       └── <area-slug>/         # One folder per meeting area
+│   │           ├── area.md          # Area definition
+│   │           └── notes/YYYY/MM/   # Area meeting notes
 │   ├── team/                        # One .md per team member
 │   ├── archive/                     # Archived completed tasks
 │   │   └── <project>/YYYY/
@@ -212,9 +216,23 @@ python scripts/dashboard.py weekly_report
 
 Every run auto-saves a snapshot to `data/reports/<type>/YYYY/MM/` so you can compare week over week.
 
+## Meeting areas
+
+Meeting areas let you group recurring meetings that aren't tied to a specific project — team syncs, partner engagements, 1:1s, all-hands, vendor calls, etc.
+
+To create a new area:
+1. Create a folder under `data/meetings/areas/<area-slug>/`
+2. Add an `area.md` definition file (from `templates/area.md`)
+3. Drop notes in `data/meetings/areas/<area-slug>/notes/YYYY/MM/`
+
+No project file needed. Tell your agent when processing a meeting: "this is a team sync" or "area: partner-engagements".
+
+See [INSTRUCTIONS.md](INSTRUCTIONS.md#meeting-areas) for full details and examples.
+
 ## Customizing
 
 - **Team roster**: add/remove files in `data/team/`
+- **Meeting areas**: add folders in `data/meetings/areas/` (each with an `area.md` from `templates/area.md`)
 - **Tag taxonomy**: edit the list in `CLAUDE.md`
 - **Templates**: modify files in `templates/` to change what new tasks/projects/meetings look like
 - **Command prompts**: edit `prompts/commands/*.md` to change how commands behave

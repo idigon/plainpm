@@ -108,13 +108,28 @@ Used in `/my-team` to calculate "days open" for each task.
 - **If uncertain** whether someone is team or external (team mode only): **ask the user** before proceeding
 - **Completeness over brevity**: meeting notes are the permanent record. Capture all topics discussed, all decisions (with context), all concerns raised, and all open questions. A longer note that misses nothing is always better than a concise one that drops details.
 
+## Meeting Areas
+
+Meeting areas are named groupings for recurring meetings that don't belong to a specific project — e.g., team syncs, partner engagements, 1:1s, all-hands, vendor calls.
+
+- Each area is a folder under `data/meetings/areas/<area-slug>/`
+- Each area has an `area.md` definition file (metadata + description)
+- Notes go in `data/meetings/areas/<area-slug>/notes/YYYY/MM/`
+- Area slugs use lowercase-kebab-case (e.g., `team-syncs`, `partner-engagements`)
+- **To create a new area**: create the folder, add `area.md` (from `templates/area.md`), and start dropping notes in.
+- The `area` field in meeting note front matter references the area slug (leave blank for project meetings or unstructured general notes).
+- Areas are independent of projects — no project file or task ID prefix is needed.
+- Task creation rules from meeting processing still apply: only team members' action items become tasks, saved to the relevant project/stream (or as project-level tasks if a project context is identified).
+
 ## Date-Based Organization
 
 Tasks are organized into **year** subfolders. Meeting notes, transcripts, and reports are organized into **year/month** subfolders. This keeps folders manageable as volume grows.
 
 - Tasks: `tasks/YYYY/TASK-ID.md`
 - Meeting transcripts: `data/meetings/transcripts/YYYY/MM/`
-- Meeting notes: `data/meetings/notes/YYYY/MM/` or `data/projects/<slug>/meetings/YYYY/MM/`
+- Meeting notes (general): `data/meetings/notes/YYYY/MM/`
+- Meeting notes (area): `data/meetings/areas/<area-slug>/notes/YYYY/MM/`
+- Meeting notes (project): `data/projects/<slug>/meetings/YYYY/MM/`
 - Reports: `data/reports/<type>/YYYY/MM/`
 
 When creating new files, always place them in the correct subfolder matching the current date. Dashboard scripts use `rglob` and scan all subfolders automatically.
@@ -131,7 +146,10 @@ When creating new files, always place them in the correct subfolder matching the
 | Stream definitions | `data/projects/<slug>/streams/<stream-slug>/stream.md` |
 | Stream tasks | `data/projects/<slug>/streams/<stream-slug>/tasks/YYYY/*.md` |
 | Meeting transcripts | `data/meetings/transcripts/YYYY/MM/` |
-| Processed notes | `data/meetings/notes/YYYY/MM/` or `data/projects/<slug>/meetings/YYYY/MM/` |
+| Processed notes (general) | `data/meetings/notes/YYYY/MM/` |
+| Processed notes (area) | `data/meetings/areas/<area-slug>/notes/YYYY/MM/` |
+| Processed notes (project) | `data/projects/<slug>/meetings/YYYY/MM/` |
+| Area definitions | `data/meetings/areas/<area-slug>/area.md` |
 | Dashboard reports | `data/reports/<type>/YYYY/MM/` |
 | Archived tasks | `data/archive/<project-slug>/YYYY/*.md` |
 | Slash commands | `.claude/commands/` |
