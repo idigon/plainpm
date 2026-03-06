@@ -122,7 +122,7 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
    - In the "Action Items" section, list every action item with the person's name. For team members, append the created task ID as a link, e.g.:
      ```
      - **Ana**: Fix the auth endpoint → `ALPHA-BE-002`
-     - **ClientName**: Send updated contract (no task — external)
+     - **ClientName**: Send updated contract
      ```
 
 10. **Show the user**:
@@ -130,7 +130,7 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
     - A summary table of tasks created:
       | ID | Task | Owner | Project | Stream |
       |----|------|-------|---------|--------|
-    - Note which action items are for external people (no tasks created)
+    - Note which action items had no task created (external attendees)
     - Any questions about ambiguous attendees
 
 $ARGUMENTS
