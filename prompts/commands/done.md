@@ -26,7 +26,7 @@ Extract from the user's input:
 
 For each task ID:
 
-1. **Find the task file** by scanning `data/projects/**/tasks/**/*.md` for a file whose YAML front matter contains a matching `id` field.
+1. **Find the task file** by scanning `data/projects/**/tasks/**/*.md` and `data/tasks/**/*.md` for a file whose YAML front matter contains a matching `id` field.
 2. **If not found**: tell the user the task ID was not found and skip it.
 3. **If found**:
    - Set `status: done` in the front matter

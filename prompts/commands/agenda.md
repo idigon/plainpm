@@ -19,7 +19,7 @@ If no project is specified, generate an agenda across all projects.
 
 ### Step 2 — Gather task data
 
-Run `python scripts/dashboard.py today` to get a snapshot of current task state. Alternatively, read task files directly by scanning `data/projects/**/tasks/**/*.md`.
+Run `python scripts/dashboard.py today` to get a snapshot of current task state. Alternatively, read task files directly by scanning `data/projects/**/tasks/**/*.md` and `data/tasks/**/*.md`.
 
 If a project was specified, scope to only that project's tasks. Otherwise, include all projects.
 

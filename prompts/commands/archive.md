@@ -18,7 +18,7 @@ The user may optionally specify:
 
 ### Step 2 — Find completed tasks to archive
 
-1. Scan `data/projects/**/tasks/**/*.md` for all task files.
+1. Scan `data/projects/**/tasks/**/*.md` and `data/tasks/**/*.md` for all task files.
 2. For each task, check:
    - `status` is `done`
    - `completed_date` exists and is older than the threshold (default: 30 days)
@@ -37,7 +37,9 @@ Then ask for confirmation before proceeding.
 
 For each confirmed task:
 
-1. Determine the archive path: `data/archive/<project-slug>/YYYY/<TASK-ID>.md`
+1. Determine the archive path:
+   - Project tasks: `data/archive/<project-slug>/YYYY/<TASK-ID>.md`
+   - Standalone tasks: `data/archive/_standalone/YYYY/<TASK-ID>.md`
    - `YYYY` is the year from the task's `completed_date`
    - Create directories if they don't exist
 2. Move the file from its current location to the archive path.
