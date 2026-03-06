@@ -472,6 +472,24 @@ def cmd_this_week():
         print("---")
         print()
 
+    # Standalone tasks (not tied to any project)
+    standalone = [t for t in tasks if not t.get("project") and (t.get("status") or "").lower() != "done"]
+    if standalone:
+        standalone.sort(key=priority_sort_key)
+        print("## Standalone Tasks")
+        print()
+        print("| ID | Task | Owner | Priority | Status | Due |")
+        print("|----|------|-------|----------|--------|-----|")
+        for t in standalone:
+            tid = t.get("id") or "???"
+            title = t["_title"]
+            owner = t.get("owner") or "Unassigned"
+            status = t.get("status") or "todo"
+            print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {status} | {fmt_due(t)} |")
+        print()
+        print("---")
+        print()
+
 
 # ---------------------------------------------------------------------------
 # Dashboard: my_team
