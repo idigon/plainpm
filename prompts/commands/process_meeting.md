@@ -22,7 +22,8 @@ data/
 ├── team/
 ├── meetings/
 │   ├── transcripts/
-│   └── notes/
+│   ├── notes/
+│   └── areas/
 └── reports/
 ```
 
@@ -70,10 +71,14 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
    - List ALL action items in a single "Action Items" section (no team/external split — the notes are shared with everyone).
    - For each action item, include the person's name and what they need to do.
 
-6. **Determine project/stream context**:
-   - If the meeting is clearly associated with a specific project, ask the user to confirm which project (and stream, if applicable).
+6. **Determine meeting context** (area or project):
+   - **Check if the user indicated a meeting area** — they may say things like "this is a team sync", "area: partner-engagements", "save under team syncs", or name an area directly. If so, use that area.
+   - **Check if a matching area exists**: list folders under `data/meetings/areas/`. If the user's description matches an existing area slug or name, use it. If a new area seems warranted, ask the user if they want to create one.
+   - **If it's an area meeting**: the `area` field in notes front matter = area slug; `project` = blank. Notes go in `data/meetings/areas/<area-slug>/notes/YYYY/MM/`.
+   - **If no area is indicated**: check if the meeting is associated with a specific project. Ask the user to confirm which project (and stream, if applicable).
    - If the meeting spans multiple projects, ask the user which project each action item belongs to.
    - If a new project or stream is needed, create it (folder + project.md/stream.md from templates, update `data/projects/_index.md`).
+   - If a **new area** is needed: create the folder `data/meetings/areas/<area-slug>/`, write `area.md` from `templates/area.md` (fill in slug, summary, created date), and create the `notes/` subfolder.
 
 7. **Create task files for team members' action items** (including yourself — in solo mode, that means only your own action items):
    For EACH action item assigned to a team member:
@@ -100,13 +105,16 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
    - Do NOT create task files for external attendees' action items.
 
 8. **Determine meeting notes location**:
-   - If associated with a specific project, ask the user if notes should go in `data/projects/<slug>/meetings/YYYY/MM/` or `data/meetings/notes/YYYY/MM/`.
-   - If general/cross-project, save in `data/meetings/notes/YYYY/MM/`.
+   - If area meeting: `data/meetings/areas/<area-slug>/notes/YYYY/MM/`
+   - If project-specific: ask the user if notes should go in `data/projects/<slug>/meetings/YYYY/MM/` or `data/meetings/notes/YYYY/MM/`.
+   - If general/cross-project: save in `data/meetings/notes/YYYY/MM/`.
    - Filename format: `YYYY-MM-DD-meeting-title.md`
    - Create subdirectories if they don't exist.
 
 9. **Create the meeting notes file** using `templates/meeting-notes.md`:
    - Fill in all YAML front matter fields
+   - `area`: area slug if this is an area meeting; otherwise leave blank
+   - `project`: project slug if project-specific; otherwise leave blank
    - `source_transcript`: path to original .vtt file (if applicable)
    - In the "Action Items" section, list every action item with the person's name. For team members, append the created task ID as a link, e.g.:
      ```

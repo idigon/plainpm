@@ -1,6 +1,7 @@
 ---
 type: meeting
 date:
+area:
 project:
 attendees: []
 links: []
