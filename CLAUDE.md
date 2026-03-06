@@ -56,6 +56,7 @@ Always display priority as icon + string (e.g., "🟠 high").
 
 - **Stream-level tasks**: `PROJECT-STREAM-NNN` (e.g., `ALPHA-BE-001`)
 - **Project-level tasks**: `PROJECT-NNN` (e.g., `ALPHA-001`)
+- **Standalone tasks**: `TASK-NNN` (e.g., `TASK-001`) — tasks not tied to any project
 - IDs use uppercase. Stream abbreviations are short (2-4 chars) derived from the stream folder name.
 - NNN is zero-padded to 3 digits, auto-incremented per scope.
 
@@ -119,13 +120,15 @@ Meeting areas are named groupings for recurring meetings that don't belong to a 
 - **To create a new area**: create the folder, add `area.md` (from `templates/area.md`), and start dropping notes in.
 - The `area` field in meeting note front matter references the area slug (leave blank for project meetings or unstructured general notes).
 - Areas are independent of projects — no project file or task ID prefix is needed.
-- Task creation rules from meeting processing still apply: only team members' action items become tasks, saved to the relevant project/stream (or as project-level tasks if a project context is identified).
+- **Area folders only contain `area.md` and `notes/`** — never put task files inside an area folder.
+- Task creation rules from meeting processing still apply: only team members' action items become tasks. Tasks go to the relevant project/stream, or to `data/tasks/YYYY/` as standalone tasks (`TASK-NNN`) if no project context applies.
 
 ## Date-Based Organization
 
 Tasks are organized into **year** subfolders. Meeting notes, transcripts, and reports are organized into **year/month** subfolders. This keeps folders manageable as volume grows.
 
-- Tasks: `tasks/YYYY/TASK-ID.md`
+- Project/stream tasks: `tasks/YYYY/TASK-ID.md`
+- Standalone tasks: `data/tasks/YYYY/TASK-ID.md`
 - Meeting transcripts: `data/meetings/transcripts/YYYY/MM/`
 - Meeting notes (general): `data/meetings/notes/YYYY/MM/`
 - Meeting notes (area): `data/meetings/areas/<area-slug>/notes/YYYY/MM/`
@@ -142,6 +145,7 @@ When creating new files, always place them in the correct subfolder matching the
 | Team members | `data/team/*.md` |
 | Project index | `data/projects/_index.md` |
 | Project files | `data/projects/<slug>/project.md` |
+| Standalone tasks | `data/tasks/YYYY/*.md` |
 | Project-level tasks | `data/projects/<slug>/tasks/YYYY/*.md` |
 | Stream definitions | `data/projects/<slug>/streams/<stream-slug>/stream.md` |
 | Stream tasks | `data/projects/<slug>/streams/<stream-slug>/tasks/YYYY/*.md` |
@@ -152,6 +156,7 @@ When creating new files, always place them in the correct subfolder matching the
 | Area definitions | `data/meetings/areas/<area-slug>/area.md` |
 | Dashboard reports | `data/reports/<type>/YYYY/MM/` |
 | Archived tasks | `data/archive/<project-slug>/YYYY/*.md` |
+| Archived standalone tasks | `data/archive/_standalone/YYYY/*.md` |
 | Slash commands | `.claude/commands/` |
 
 ## Project Slugs
