@@ -90,6 +90,33 @@ def extract_title(filepath: Path) -> str:
     return filepath.stem
 
 
+def extract_latest_update(filepath: Path) -> str | None:
+    """Return the most recent dated bullet from the Updates section of a stream file."""
+    try:
+        text = filepath.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    in_updates = False
+    latest_date = None
+    latest_text = None
+    for line in text.splitlines():
+        if re.match(r"^#{2,4}\s+Updates", line):
+            in_updates = True
+            continue
+        if in_updates and re.match(r"^#{1,4}\s+", line):
+            break
+        if in_updates:
+            m = re.match(r"^-\s+(\d{4}-\d{2}-\d{2}):\s+(.+)", line)
+            if m:
+                d, txt = m.group(1), m.group(2).strip()
+                if latest_date is None or d > latest_date:
+                    latest_date = d
+                    latest_text = txt
+    if latest_date and latest_text:
+        return f"{latest_date}: {latest_text}"
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Data loaders
 # ---------------------------------------------------------------------------
@@ -188,7 +215,23 @@ def load_streams(project_slug: str) -> list[dict]:
             fm = parse_front_matter(sf)
             fm["_slug"] = stream_dir.name
             fm["_title"] = extract_title(sf)
+            fm["_latest_update"] = extract_latest_update(sf)
             streams.append(fm)
+    return streams
+
+
+def load_all_streams() -> list[dict]:
+    """Load all stream.md files across all projects."""
+    streams = []
+    projects_dir = DATA_DIR / "projects"
+    if not projects_dir.exists():
+        return streams
+    for project_dir in sorted(projects_dir.iterdir()):
+        if not project_dir.is_dir():
+            continue
+        for stream in load_streams(project_dir.name):
+            stream["_project_slug"] = project_dir.name
+            streams.append(stream)
     return streams
 
 
@@ -314,7 +357,14 @@ def cmd_today():
             print(f"### {project_display_name(proj)}")
             for stream in sorted(grouped[proj]):
                 if stream != "(Project-level)":
-                    print(f"#### {stream_display_name(proj, stream)}")
+                    sf = DATA_DIR / "projects" / proj / "streams" / stream / "stream.md"
+                    sfm = parse_front_matter(sf) if sf.exists() else {}
+                    sstatus = sfm.get("status") or "active"
+                    latest = extract_latest_update(sf) if sf.exists() else None
+                    print(f"#### {stream_display_name(proj, stream)} ({sstatus})")
+                    if latest:
+                        print(f"> Latest: {latest}")
+                        print()
                 else:
                     print(f"#### {stream}")
                 for t in grouped[proj][stream]:
@@ -367,6 +417,9 @@ def cmd_this_week():
             stream_tasks.sort(key=priority_sort_key)
 
             print(f"### Stream: {stream['_title']} ({sstatus})")
+            latest = stream.get("_latest_update")
+            if latest:
+                print(f"> Latest: {latest}")
             print()
             if stream_tasks:
                 print("| ID | Task | Owner | Priority | Status | Due |")
@@ -452,6 +505,21 @@ def cmd_my_team():
 
         print()
         print("---")
+        print()
+
+    # Stream status
+    all_streams = load_all_streams()
+    active_streams = [s for s in all_streams if (s.get("status") or "active") != "completed"]
+    if active_streams:
+        print("## Stream Status")
+        print()
+        print("| Project | Stream | Status | Latest Update |")
+        print("|---------|--------|--------|---------------|")
+        for s in active_streams:
+            proj_name = project_display_name(s["_project_slug"])
+            sstatus = s.get("status") or "active"
+            latest = s.get("_latest_update") or "—"
+            print(f"| {proj_name} | {s['_title']} | {sstatus} | {latest} |")
         print()
 
     # Summary table
@@ -576,6 +644,21 @@ def cmd_weekly_report():
     else:
         print("None")
     print()
+
+    # Stream status
+    all_streams = load_all_streams()
+    active_streams = [s for s in all_streams if (s.get("status") or "active") != "completed"]
+    if active_streams:
+        print("## 🌊 Stream Status")
+        print()
+        print("| Project | Stream | Status | Latest Update |")
+        print("|---------|--------|--------|---------------|")
+        for s in active_streams:
+            proj_name = project_display_name(s["_project_slug"])
+            sstatus = s.get("status") or "active"
+            latest = s.get("_latest_update") or "—"
+            print(f"| {proj_name} | {s['_title']} | {sstatus} | {latest} |")
+        print()
 
     # Summary
     print("## 📊 Summary")
