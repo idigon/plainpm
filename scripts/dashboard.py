@@ -336,14 +336,16 @@ def cmd_today():
     in_progress = []
     blocked = []
     not_started = []
+    completed = []
 
     for t in tasks:
         status = (t.get("status") or "").lower()
-        if status == "done":
-            continue
         due = parse_date(t.get("due_date"))
 
-        if due and due < today and status != "done":
+        if status == "done":
+            completed.append(t)
+            continue
+        if due and due < today:
             overdue.append(t)
         if due and due == today:
             due_today.append(t)
@@ -400,6 +402,7 @@ def cmd_today():
     print_section("🔄 In Progress", in_progress)
     print_section("🚫 Blocked", blocked)
     print_section("📋 Not Started", not_started)
+    print_section("✅ Completed", completed)
 
 
 # ---------------------------------------------------------------------------
@@ -425,7 +428,7 @@ def cmd_this_week():
         print(f"## Project: {proj['_title']} ({pstatus})")
         print()
 
-        proj_tasks = [t for t in tasks if t.get("project") == slug and (t.get("status") or "").lower() != "done"]
+        proj_tasks = [t for t in tasks if t.get("project") == slug]
         streams = load_streams(slug)
 
         # Stream tasks
@@ -473,7 +476,7 @@ def cmd_this_week():
         print()
 
     # Standalone tasks (not tied to any project)
-    standalone = [t for t in tasks if not t.get("project") and (t.get("status") or "").lower() != "done"]
+    standalone = [t for t in tasks if not t.get("project")]
     if standalone:
         standalone.sort(key=priority_sort_key)
         print("## Standalone Tasks")
@@ -500,11 +503,9 @@ def cmd_my_team():
     tasks = load_all_tasks()
     team = load_team()
 
-    open_tasks = [t for t in tasks if (t.get("status") or "").lower() not in ("done",)]
-
     # Group by owner
     by_owner = defaultdict(list)
-    for t in open_tasks:
+    for t in tasks:
         owner = t.get("owner") or "Unassigned"
         by_owner[owner].append(t)
 
@@ -521,8 +522,10 @@ def cmd_my_team():
         owner_tasks.sort(key=priority_sort_key)
 
         role_str = f" — {role}" if role else ""
+        open_count = sum(1 for t in owner_tasks if (t.get("status") or "").lower() != "done")
+        done_count = sum(1 for t in owner_tasks if (t.get("status") or "").lower() == "done")
         print(f"## {owner}{role_str}")
-        print(f"**Open tasks**: {len(owner_tasks)}")
+        print(f"**Open tasks**: {open_count} | **Completed**: {done_count}")
         print()
         print("| ID | Task | Project | Stream | Priority | Status | Due | Days Open |")
         print("|----|------|---------|--------|----------|--------|-----|-----------|")
@@ -562,11 +565,12 @@ def cmd_my_team():
     # Summary table
     print("## Summary")
     print()
-    print("| Member | Open | In Progress | Blocked | Oldest Task (days) |")
-    print("|--------|------|-------------|---------|---------------------|")
+    print("| Member | Open | In Progress | Blocked | Completed | Oldest Task (days) |")
+    print("|--------|------|-------------|---------|-----------|---------------------|")
     for owner in owners:
         owner_tasks = by_owner[owner]
-        open_count = len(owner_tasks)
+        open_count = sum(1 for t in owner_tasks if (t.get("status") or "").lower() != "done")
+        done_count = sum(1 for t in owner_tasks if (t.get("status") or "").lower() == "done")
         ip = sum(1 for t in owner_tasks if (t.get("status") or "").lower() == "in-progress")
         bl = sum(1 for t in owner_tasks if (t.get("status") or "").lower() == "blocked")
         ages = []
@@ -575,7 +579,7 @@ def cmd_my_team():
             if created:
                 ages.append(working_days_between(created, today))
         oldest = max(ages) if ages else "?"
-        print(f"| {owner} | {open_count} | {ip} | {bl} | {oldest} |")
+        print(f"| {owner} | {open_count} | {ip} | {bl} | {done_count} | {oldest} |")
     print()
 
 
