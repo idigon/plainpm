@@ -1,6 +1,9 @@
 # ===== User data (projects, team, meetings, reports) =====
 data/
 
+# ===== Obsidian metadata =====
+.obsidian/
+
 # ===== OS =====
 .DS_Store
 .DS_Store?
