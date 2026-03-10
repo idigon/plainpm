@@ -10,6 +10,6 @@ python scripts/dashboard.py weekly_report
 
 Display the full output as-is — it is already formatted as markdown. Do not summarize or modify it.
 
-The script automatically saves a snapshot to `data/reports/weekly-report/YYYY/MM/YYYY-MM-DD.md` (dated to Monday of the week). Mention the saved file path to the user.
+The script automatically saves a snapshot to `data/reports/weekly-report/YYYY/MM/YYYY-MM-DD-weekly-report.md` (dated to Monday of the week). Mention the saved file path to the user.
 
 If the output summary shows all zeros, mention that no task activity was recorded this week.

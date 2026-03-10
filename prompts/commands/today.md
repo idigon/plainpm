@@ -10,6 +10,6 @@ python scripts/dashboard.py today
 
 Display the full output as-is — it is already formatted as markdown. Do not summarize or modify it.
 
-The script automatically saves a snapshot to `data/reports/daily/YYYY/MM/YYYY-MM-DD.md`. Mention the saved file path to the user.
+The script automatically saves a snapshot to `data/reports/daily/YYYY/MM/YYYY-MM-DD-daily.md`. Mention the saved file path to the user.
 
 If the output shows no tasks at all, mention that there are no open tasks yet.

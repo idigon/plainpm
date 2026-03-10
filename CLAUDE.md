@@ -180,10 +180,10 @@ Every run automatically saves a snapshot to `data/reports/`:
 
 | Command | Saved to | Date key |
 |---------|----------|----------|
-| `today` | `data/reports/daily/YYYY/MM/YYYY-MM-DD.md` | Today |
-| `this_week` | `data/reports/weekly/YYYY/MM/YYYY-MM-DD.md` | Monday of the week |
-| `my_team` | `data/reports/team/YYYY/MM/YYYY-MM-DD.md` | Today |
-| `weekly_report` | `data/reports/weekly-report/YYYY/MM/YYYY-MM-DD.md` | Monday of the week |
+| `today` | `data/reports/daily/YYYY/MM/YYYY-MM-DD-daily.md` | Today |
+| `this_week` | `data/reports/weekly/YYYY/MM/YYYY-MM-DD-weekly.md` | Monday of the week |
+| `my_team` | `data/reports/team/YYYY/MM/YYYY-MM-DD-team.md` | Today |
+| `weekly_report` | `data/reports/weekly-report/YYYY/MM/YYYY-MM-DD-weekly-report.md` | Monday of the week |
 
 Running the same command twice on the same day overwrites the previous snapshot for that date.
 
