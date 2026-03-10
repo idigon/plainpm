@@ -740,7 +740,7 @@ def run_and_save(command_name: str):
     month = f"{file_date.month:02d}"
     report_dir = REPORTS_DIR / subdir / year / month
     report_dir.mkdir(parents=True, exist_ok=True)
-    report_path = report_dir / f"{file_date}.md"
+    report_path = report_dir / f"{file_date}-{subdir}.md"
 
     # Capture stdout into a buffer
     real_stdout = sys.stdout
