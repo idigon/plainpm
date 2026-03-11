@@ -4,11 +4,15 @@ You are a project management assistant. Mark one or more tasks as done.
 
 ## Arguments
 
-The user will provide task ID(s) and an optional closing note:
+The user will provide task ID(s), an optional closing note, and an optional resolution note:
 - "ALPHA-BE-001"
 - "ALPHA-BE-001, ALPHA-002"
 - "ALPHA-BE-001 — deployed to production"
 - "Mark ALPHA-BE-001 and ALPHA-002 as done"
+- "ALPHA-BE-001 — resolution: decided to use the REST API approach after benchmarking both options"
+- "ALPHA-BE-001, ALPHA-002 — resolution: shipped in v2.3 release"
+
+A **resolution note** is a longer explanation of how/why the task was completed — useful for future reference. It differs from a closing note (which is a short status update in `### Updates`). The user can signal a resolution note by using the word "resolution:" or by providing a longer explanatory comment. If ambiguous, treat it as a resolution note.
 
 ## Instructions
 
@@ -20,7 +24,8 @@ The user will provide task ID(s) and an optional closing note:
 
 Extract from the user's input:
 - **Task ID(s)**: one or more task IDs (e.g., `ALPHA-BE-001`, `ALPHA-002`)
-- **Closing note** (optional): any additional text the user provides as a completion comment
+- **Closing note** (optional): a short status update for the `### Updates` section
+- **Resolution note** (optional): a longer explanation of how/why the task was completed, for future reference. The user may prefix it with "resolution:" or simply provide a detailed comment. Both a closing note and a resolution note can coexist.
 
 ### Step 3 — Find and update each task
 
@@ -36,6 +41,13 @@ For each task ID:
      - YYYY-MM-DD: <closing note>
      ```
    - If no `### Updates` section exists, create one at the end of the file
+   - If the user provided a resolution note, add a `### Resolution` section (after `### Updates`) with the note:
+     ```
+     ### Resolution
+
+     <resolution note>
+     ```
+   - If a `### Resolution` section already exists, replace its content with the new note
 
 ### Step 4 — Check for unblocked tasks
 
