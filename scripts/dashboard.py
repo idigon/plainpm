@@ -256,6 +256,7 @@ def load_all_streams() -> list[dict]:
 
 PRIORITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
 PRIORITY_ICONS = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}
+STATUS_ICONS = {"todo": "⬚", "in-progress": "🔄", "blocked": "🚫", "done": "✅"}
 
 
 def priority_sort_key(task: dict):
@@ -268,6 +269,12 @@ def fmt_priority(task: dict) -> str:
     p = (task.get("priority") or "medium").lower()
     icon = PRIORITY_ICONS.get(p, "🟡")
     return f"{icon} {p}"
+
+
+def fmt_status(task: dict) -> str:
+    s = (task.get("status") or "todo").lower()
+    icon = STATUS_ICONS.get(s, "⬚")
+    return f"{icon} {s}"
 
 
 def fmt_due(task: dict) -> str:
@@ -450,8 +457,7 @@ def cmd_this_week():
                     tid = t.get("id") or "???"
                     title = t["_title"]
                     owner = t.get("owner") or "Unassigned"
-                    status = t.get("status") or "todo"
-                    print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {status} | {fmt_due(t)} |")
+                    print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} |")
             else:
                 print("No open tasks.")
             print()
@@ -468,8 +474,7 @@ def cmd_this_week():
                 tid = t.get("id") or "???"
                 title = t["_title"]
                 owner = t.get("owner") or "Unassigned"
-                status = t.get("status") or "todo"
-                print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {status} | {fmt_due(t)} |")
+                print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} |")
             print()
 
         print("---")
@@ -487,8 +492,7 @@ def cmd_this_week():
             tid = t.get("id") or "???"
             title = t["_title"]
             owner = t.get("owner") or "Unassigned"
-            status = t.get("status") or "todo"
-            print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {status} | {fmt_due(t)} |")
+            print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} |")
         print()
         print("---")
         print()
@@ -537,11 +541,10 @@ def cmd_my_team():
             stream = t.get("stream") or "—"
             if stream != "—":
                 stream = stream_display_name(t.get("project") or "", stream)
-            status = t.get("status") or "todo"
             created = parse_date(t.get("created"))
             days = working_days_between(created, today) if created else "?"
             warn = "⚠️ " if isinstance(days, int) and days > 14 else ""
-            print(f"| {warn}{tid} | {title} | {proj} | {stream} | {fmt_priority(t)} | {status} | {fmt_due(t)} | {days} |")
+            print(f"| {warn}{tid} | {title} | {proj} | {stream} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} | {days} |")
 
         print()
         print("---")
