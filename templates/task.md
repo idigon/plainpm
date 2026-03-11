@@ -20,3 +20,5 @@ source_meeting:
 [Description]
 
 ### Updates
+
+### Resolution
