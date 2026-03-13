@@ -395,13 +395,24 @@ def cmd_today():
                         print()
                 else:
                     print(f"#### {stream}")
+                print()
+                has_deps = any(t.get("blocked_by") for t in grouped[proj][stream])
+                if has_deps:
+                    print("| ID | Task | Owner | Priority | Due | Blocked By |")
+                    print("|----|------|-------|----------|-----|------------|")
+                else:
+                    print("| ID | Task | Owner | Priority | Due |")
+                    print("|----|------|-------|----------|-----|")
                 for t in grouped[proj][stream]:
                     tid = t.get("id") or "???"
                     title = t["_title"]
                     owner = t.get("owner") or "Unassigned"
                     blocked_by = t.get("blocked_by") or []
-                    dep_str = f" | Blocked by: {', '.join(blocked_by)}" if blocked_by else ""
-                    print(f"- {fmt_priority(t)} **{tid}** — {title} | Owner: {owner} | Due: {fmt_due(t)}{dep_str}")
+                    if has_deps:
+                        dep_str = ", ".join(blocked_by) if blocked_by else "—"
+                        print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_due(t)} | {dep_str} |")
+                    else:
+                        print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_due(t)} |")
                 print()
 
     print_section("🔴 Overdue", overdue)
