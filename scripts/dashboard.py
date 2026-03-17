@@ -212,6 +212,7 @@ def load_projects() -> list[dict]:
             fm = parse_front_matter(pf)
             fm["_slug"] = project_dir.name
             fm["_title"] = extract_title(pf)
+            fm["_latest_update"] = extract_latest_update(pf)
             projects.append(fm)
     return projects
 
@@ -383,6 +384,12 @@ def cmd_today():
 
         for proj in sorted(grouped):
             print(f"### {project_display_name(proj)}")
+            if proj:
+                pf = DATA_DIR / "projects" / proj / "project.md"
+                proj_latest = extract_latest_update(pf) if pf.exists() else None
+                if proj_latest:
+                    print(f"> Latest: {proj_latest}")
+                    print()
             for stream in sorted(grouped[proj]):
                 if stream != "(Project-level)" and proj:
                     sf = DATA_DIR / "projects" / proj / "streams" / stream / "stream.md"
@@ -444,6 +451,9 @@ def cmd_this_week():
         slug = proj["_slug"]
         pstatus = proj.get("status") or "active"
         print(f"## Project: {proj['_title']} ({pstatus})")
+        latest = proj.get("_latest_update")
+        if latest:
+            print(f"> Latest: {latest}")
         print()
 
         proj_tasks = [t for t in tasks if t.get("project") == slug]
@@ -559,6 +569,20 @@ def cmd_my_team():
 
         print()
         print("---")
+        print()
+
+    # Project status
+    projects = load_projects()
+    active_projects = [p for p in projects if (p.get("status") or "active") != "completed"]
+    if active_projects:
+        print("## Project Status")
+        print()
+        print("| Project | Status | Latest Update |")
+        print("|---------|--------|---------------|")
+        for p in active_projects:
+            pstatus = p.get("status") or "active"
+            latest = p.get("_latest_update") or "—"
+            print(f"| {p['_title']} | {pstatus} | {latest} |")
         print()
 
     # Stream status
@@ -699,6 +723,20 @@ def cmd_weekly_report():
     else:
         print("None")
     print()
+
+    # Project status
+    projects = load_projects()
+    active_projects = [p for p in projects if (p.get("status") or "active") != "completed"]
+    if active_projects:
+        print("## 📁 Project Status")
+        print()
+        print("| Project | Status | Latest Update |")
+        print("|---------|--------|---------------|")
+        for p in active_projects:
+            pstatus = p.get("status") or "active"
+            latest = p.get("_latest_update") or "—"
+            print(f"| {p['_title']} | {pstatus} | {latest} |")
+        print()
 
     # Stream status
     all_streams = load_all_streams()
