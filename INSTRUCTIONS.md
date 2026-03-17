@@ -105,6 +105,7 @@ The command will:
 - Parse the content and generate structured meeting notes
 - Identify attendees (team vs. external)
 - Create task files for every team member action item
+- Append update notes to any projects, streams, or existing tasks that were discussed (see [Cross-reference updates](#cross-reference-updates))
 - List external attendees' action items in the notes only (no task files)
 - Ask you about anything unclear
 
@@ -687,6 +688,37 @@ General discussion about Q2 roadmap priorities.
 ```
 
 Then create the corresponding task files manually if needed.
+
+### Cross-reference updates
+
+When processing a meeting, the agent also scans the discussion for references to existing projects, streams, and tasks. For each entity that was meaningfully discussed (not just mentioned in passing), it **proposes** a dated one-liner for the entity's `### Updates` section — but always asks for your approval first.
+
+The agent shows you each proposed update alongside the entity's existing latest update, so you can see the full picture:
+
+```
+Proposed updates from this meeting:
+
+1. **roles / phase-1** (stream) — data/projects/roles/streams/phase-1/stream.md
+   Latest existing update: `- 2026-03-11: Sales enablement training scheduled April 2nd. Nashat building materials.`
+   Proposed: `- 2026-03-17: Training materials ready, dry run scheduled for March 28 (source: [Team Sync — Mar 17](...))`
+```
+
+For each proposed update, you can:
+- **Approve** — append as-is
+- **Edit** — provide your own text (e.g., merge the existing and new update into one)
+- **Replace** — replace the existing latest update instead of appending (when the new info supersedes it)
+- **Skip** — don't touch this entity
+
+You can respond per-entity or in bulk (e.g., "approve all", "skip 1, approve the rest").
+
+**What gets proposed:**
+- **Projects** (`project.md`): when the meeting discussed project-level status, decisions, risks, or timeline changes
+- **Streams** (`stream.md`): when the meeting discussed a specific stream's progress, scope, or blockers
+- **Existing tasks**: when the meeting discussed progress, decisions, or blockers on a known open task
+
+**What doesn't get proposed:**
+- Entities only mentioned in passing with no substantive discussion
+- New tasks that were just created from the meeting's action items (they already have the context in their description)
 
 ### Where meeting notes are saved
 

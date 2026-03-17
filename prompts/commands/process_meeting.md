@@ -107,29 +107,85 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
       - Create directories if they don't exist.
    - Do NOT create task files for external attendees' action items.
 
-8. **Determine meeting notes location**:
+8. **Cross-reference updates to existing entities** (projects, streams, and tasks):
+
+   After extracting action items and creating new tasks, review the meeting content for discussions about existing projects, streams, or tasks. For each entity that was meaningfully discussed, propose a dated summary for its `### Updates` section — but **always ask the user for approval before writing**.
+
+   a. **Identify discussed entities**:
+      - **Projects**: check if the meeting discussed any project in `data/projects/`. Match by project name, slug, or general context.
+      - **Streams**: check if specific streams within a project were discussed. Match by stream name or slug.
+      - **Existing tasks**: check if any existing task IDs were mentioned (e.g., `ALPHA-BE-001`) or if discussion clearly refers to a known open task (match by title/description).
+
+   b. **What to include vs. skip**:
+      - **Include**: status updates, decisions affecting the entity, blockers discussed, scope changes, timeline changes, new context or requirements.
+      - **Skip**: passing mentions with no substance (e.g., "we also have project X" with no further discussion), action items that are already captured as new tasks.
+      - **For existing tasks**: do NOT duplicate information that's already in a newly created task's description.
+
+   c. **Present proposed updates to the user for review**:
+      For each identified entity, show:
+      - The entity name, type (project / stream / task), and file path.
+      - The **existing latest update** (the last entry currently under `### Updates`), so the user can see what's already there. If there are no existing updates, say "(no existing updates)".
+      - The **proposed new update** — format: `- YYYY-MM-DD: <concise summary> (source: [meeting title](relative-path-to-meeting-notes))`
+      - Keep each proposed entry to 1-2 sentences. The meeting notes have the full detail; the update is a pointer and quick summary.
+
+      Display this as a clear list, for example:
+      ```
+      Proposed updates from this meeting:
+
+      1. **roles** (project) — `data/projects/roles/project.md`
+         Latest existing update: (none)
+         Proposed: `- 2026-03-17: Phase 1 on track for C26.03, sales enablement training confirmed for April 2nd (source: [Team Sync — Mar 17](...))`
+
+      2. **roles / phase-1** (stream) — `data/projects/roles/streams/phase-1/stream.md`
+         Latest existing update: `- 2026-03-11: Sales enablement training scheduled April 2nd. Nashat building materials.`
+         Proposed: `- 2026-03-17: Training materials ready, dry run scheduled for March 28 (source: [Team Sync — Mar 17](...))`
+
+      3. **ROLES-004** (task) — `data/projects/roles/tasks/2026/ROLES-004.md`
+         Latest existing update: `- 2026-03-14: Waiting on design review`
+         Proposed: `- 2026-03-17: Design review completed, moving to implementation (source: [Team Sync — Mar 17](...))`
+      ```
+
+   d. **Ask the user what to do for each** (or all at once). The user may:
+      - **Approve** — append the proposed update as-is.
+      - **Edit** — provide a revised update text (e.g., merging the existing latest update with the new one, or rewording).
+      - **Replace** — replace the existing latest update instead of appending (useful when the new info supersedes the old).
+      - **Skip** — don't add any update to that entity.
+
+      The user can respond per-entity or in bulk (e.g., "approve all", "skip 2, approve the rest", "edit 3 to say: ...").
+
+   e. **Apply approved updates**:
+      - For "approve" or "edit": append the (possibly revised) entry under `### Updates`.
+      - For "replace": replace the last entry under `### Updates` with the new one.
+      - If `### Updates` doesn't exist in the file, add it at the end of the document.
+      - Do NOT write any update the user skipped.
+
+9. **Determine meeting notes location**:
    - If area meeting: `data/meetings/areas/<area-slug>/notes/YYYY/MM/`
    - If project-specific: ask the user if notes should go in `data/projects/<slug>/meetings/YYYY/MM/` or `data/meetings/notes/YYYY/MM/`.
    - If general/cross-project: save in `data/meetings/notes/YYYY/MM/`.
    - Filename format: `YYYY-MM-DD-meeting-title.md`
    - Create subdirectories if they don't exist.
 
-9. **Create the meeting notes file** using `templates/meeting-notes.md`:
-   - Fill in all YAML front matter fields
-   - `area`: area slug if this is an area meeting; otherwise leave blank
-   - `project`: project slug if project-specific; otherwise leave blank
-   - `source_transcript`: path to original .vtt file (if applicable)
-   - In the "Action Items" section, list every action item with the person's name. For team members, append the created task ID as a link, e.g.:
-     ```
-     - **Ana**: Fix the auth endpoint → `ALPHA-BE-002`
-     - **ClientName**: Send updated contract
-     ```
+10. **Create the meeting notes file** using `templates/meeting-notes.md`:
+    - Fill in all YAML front matter fields
+    - `area`: area slug if this is an area meeting; otherwise leave blank
+    - `project`: project slug if project-specific; otherwise leave blank
+    - `source_transcript`: path to original .vtt file (if applicable)
+    - In the "Action Items" section, list every action item with the person's name. For team members, append the created task ID as a link, e.g.:
+      ```
+      - **Ana**: Fix the auth endpoint → `ALPHA-BE-002`
+      - **ClientName**: Send updated contract
+      ```
 
-10. **Show the user**:
+11. **Show the user**:
     - The generated meeting notes (full content)
     - A summary table of tasks created:
       | ID | Task | Owner | Project | Stream |
       |----|------|-------|---------|--------|
+    - A summary of entity updates applied (after user approval from step 8):
+      | Entity | Type | Action |
+      |--------|------|--------|
+      (e.g., `roles` | project | approved / `roles / phase-1` | stream | edited / `ROLES-004` | task | skipped)
     - Note which action items had no task created (external attendees)
     - Any questions about ambiguous attendees
 
