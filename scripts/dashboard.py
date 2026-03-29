@@ -134,6 +134,7 @@ def load_all_tasks() -> list[dict]:
                 continue
             fm["_file"] = tf
             fm["_title"] = extract_title(tf)
+            fm["_latest_update"] = extract_latest_update(tf)
             fm.setdefault("project", None)
             fm.setdefault("stream", None)
             tasks.append(fm)
@@ -157,6 +158,7 @@ def load_all_tasks() -> list[dict]:
                     continue
                 fm["_file"] = tf
                 fm["_title"] = extract_title(tf)
+                fm["_latest_update"] = extract_latest_update(tf)
                 fm.setdefault("project", slug)
                 fm.setdefault("stream", None)
                 tasks.append(fm)
@@ -176,6 +178,7 @@ def load_all_tasks() -> list[dict]:
                         continue
                     fm["_file"] = tf
                     fm["_title"] = extract_title(tf)
+                    fm["_latest_update"] = extract_latest_update(tf)
                     fm.setdefault("project", slug)
                     fm.setdefault("stream", stream_dir.name)
                     tasks.append(fm)
@@ -281,6 +284,16 @@ def fmt_status(task: dict) -> str:
 def fmt_due(task: dict) -> str:
     d = task.get("due_date")
     return d if d else "No due date"
+
+
+MAX_UPDATE_LEN = 60
+
+
+def fmt_latest_update(task: dict) -> str:
+    update = task.get("_latest_update") or ""
+    if len(update) > MAX_UPDATE_LEN:
+        update = update[:MAX_UPDATE_LEN - 3] + "..."
+    return update or "—"
 
 
 def parse_date(s) -> date | None:
@@ -407,21 +420,22 @@ def cmd_today():
                 print()
                 has_deps = any(t.get("blocked_by") for t in grouped[proj][stream])
                 if has_deps:
-                    print("| ID | Task | Owner | Priority | Due | Blocked By |")
-                    print("|----|------|-------|----------|-----|------------|")
+                    print("| ID | Task | Owner | Priority | Due | Blocked By | Latest Update |")
+                    print("|----|------|-------|----------|-----|------------|---------------|")
                 else:
-                    print("| ID | Task | Owner | Priority | Due |")
-                    print("|----|------|-------|----------|-----|")
+                    print("| ID | Task | Owner | Priority | Due | Latest Update |")
+                    print("|----|------|-------|----------|-----|---------------|")
                 for t in grouped[proj][stream]:
                     tid = t.get("id") or "???"
                     title = t["_title"]
                     owner = t.get("owner") or "Unassigned"
+                    update = fmt_latest_update(t)
                     blocked_by = t.get("blocked_by") or []
                     if has_deps:
                         dep_str = ", ".join(blocked_by) if blocked_by else "—"
-                        print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_due(t)} | {dep_str} |")
+                        print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_due(t)} | {dep_str} | {update} |")
                     else:
-                        print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_due(t)} |")
+                        print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_due(t)} | {update} |")
                 print()
 
     print_section("🔴 Overdue", overdue)
@@ -477,13 +491,13 @@ def cmd_this_week():
                 print(f"> Latest: {latest}")
             print()
             if stream_tasks:
-                print("| ID | Task | Owner | Priority | Status | Due |")
-                print("|----|------|-------|----------|--------|-----|")
+                print("| ID | Task | Owner | Priority | Status | Due | Latest Update |")
+                print("|----|------|-------|----------|--------|-----|---------------|")
                 for t in stream_tasks:
                     tid = t.get("id") or "???"
                     title = t["_title"]
                     owner = t.get("owner") or "Unassigned"
-                    print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} |")
+                    print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} | {fmt_latest_update(t)} |")
             else:
                 print("No open tasks.")
             print()
@@ -494,13 +508,13 @@ def cmd_this_week():
         if plevel:
             print("### (Project-level tasks)")
             print()
-            print("| ID | Task | Owner | Priority | Status | Due |")
-            print("|----|------|-------|----------|--------|-----|")
+            print("| ID | Task | Owner | Priority | Status | Due | Latest Update |")
+            print("|----|------|-------|----------|--------|-----|---------------|")
             for t in plevel:
                 tid = t.get("id") or "???"
                 title = t["_title"]
                 owner = t.get("owner") or "Unassigned"
-                print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} |")
+                print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} | {fmt_latest_update(t)} |")
             print()
 
         print("---")
@@ -512,13 +526,13 @@ def cmd_this_week():
         standalone.sort(key=priority_sort_key)
         print("## Standalone Tasks")
         print()
-        print("| ID | Task | Owner | Priority | Status | Due |")
-        print("|----|------|-------|----------|--------|-----|")
+        print("| ID | Task | Owner | Priority | Status | Due | Latest Update |")
+        print("|----|------|-------|----------|--------|-----|---------------|")
         for t in standalone:
             tid = t.get("id") or "???"
             title = t["_title"]
             owner = t.get("owner") or "Unassigned"
-            print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} |")
+            print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} | {fmt_latest_update(t)} |")
         print()
         print("---")
         print()
@@ -560,8 +574,8 @@ def cmd_my_team():
         print(f"## {owner}{role_str}")
         print(f"**Open tasks**: {open_count} | **Completed today**: {done_count}")
         print()
-        print("| ID | Task | Project | Stream | Priority | Status | Due | Days Open |")
-        print("|----|------|---------|--------|----------|--------|-----|-----------|")
+        print("| ID | Task | Project | Stream | Priority | Status | Due | Days Open | Latest Update |")
+        print("|----|------|---------|--------|----------|--------|-----|-----------|---------------|")
 
         for t in owner_tasks:
             tid = t.get("id") or "???"
@@ -573,7 +587,7 @@ def cmd_my_team():
             created = parse_date(t.get("created"))
             days = working_days_between(created, today) if created else "?"
             warn = "⚠️ " if isinstance(days, int) and days > 14 else ""
-            print(f"| {warn}{tid} | {title} | {proj} | {stream} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} | {days} |")
+            print(f"| {warn}{tid} | {title} | {proj} | {stream} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} | {days} | {fmt_latest_update(t)} |")
 
         print()
         print("---")
@@ -667,15 +681,15 @@ def cmd_weekly_report():
     print()
     if completed:
         completed.sort(key=lambda t: t.get("completed_date") or "")
-        print("| ID | Task | Project | Owner | Completed |")
-        print("|----|------|---------|-------|-----------|")
+        print("| ID | Task | Project | Owner | Completed | Latest Update |")
+        print("|----|------|---------|-------|-----------|---------------|")
         for t in completed:
             tid = t.get("id") or "???"
             title = t["_title"]
             proj = project_display_name(t.get("project") or "")
             owner = t.get("owner") or "Unassigned"
             cd = t.get("completed_date") or "?"
-            print(f"| {tid} | {title} | {proj} | {owner} | {cd} |")
+            print(f"| {tid} | {title} | {proj} | {owner} | {cd} | {fmt_latest_update(t)} |")
     else:
         print("None")
     print()
@@ -685,14 +699,14 @@ def cmd_weekly_report():
     print()
     if in_progress:
         in_progress.sort(key=priority_sort_key)
-        print("| ID | Task | Project | Owner | Priority | Due |")
-        print("|----|------|---------|-------|----------|-----|")
+        print("| ID | Task | Project | Owner | Priority | Due | Latest Update |")
+        print("|----|------|---------|-------|----------|-----|---------------|")
         for t in in_progress:
             tid = t.get("id") or "???"
             title = t["_title"]
             proj = project_display_name(t.get("project") or "")
             owner = t.get("owner") or "Unassigned"
-            print(f"| {tid} | {title} | {proj} | {owner} | {fmt_priority(t)} | {fmt_due(t)} |")
+            print(f"| {tid} | {title} | {proj} | {owner} | {fmt_priority(t)} | {fmt_due(t)} | {fmt_latest_update(t)} |")
     else:
         print("None")
     print()
@@ -702,15 +716,15 @@ def cmd_weekly_report():
     print()
     if blocked:
         blocked.sort(key=priority_sort_key)
-        print("| ID | Task | Project | Owner | Priority | Created |")
-        print("|----|------|---------|-------|----------|---------|")
+        print("| ID | Task | Project | Owner | Priority | Created | Latest Update |")
+        print("|----|------|---------|-------|----------|---------|---------------|")
         for t in blocked:
             tid = t.get("id") or "???"
             title = t["_title"]
             proj = project_display_name(t.get("project") or "")
             owner = t.get("owner") or "Unassigned"
             created = t.get("created") or "?"
-            print(f"| {tid} | {title} | {proj} | {owner} | {fmt_priority(t)} | {created} |")
+            print(f"| {tid} | {title} | {proj} | {owner} | {fmt_priority(t)} | {created} | {fmt_latest_update(t)} |")
     else:
         print("None")
     print()
@@ -720,14 +734,14 @@ def cmd_weekly_report():
     print()
     if new_this_week:
         new_this_week.sort(key=priority_sort_key)
-        print("| ID | Task | Project | Owner | Priority | Due |")
-        print("|----|------|---------|-------|----------|-----|")
+        print("| ID | Task | Project | Owner | Priority | Due | Latest Update |")
+        print("|----|------|---------|-------|----------|-----|---------------|")
         for t in new_this_week:
             tid = t.get("id") or "???"
             title = t["_title"]
             proj = project_display_name(t.get("project") or "")
             owner = t.get("owner") or "Unassigned"
-            print(f"| {tid} | {title} | {proj} | {owner} | {fmt_priority(t)} | {fmt_due(t)} |")
+            print(f"| {tid} | {title} | {proj} | {owner} | {fmt_priority(t)} | {fmt_due(t)} | {fmt_latest_update(t)} |")
     else:
         print("None")
     print()
