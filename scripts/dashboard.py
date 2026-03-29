@@ -351,7 +351,9 @@ def cmd_today():
         due = parse_date(t.get("due_date"))
 
         if status == "done":
-            completed.append(t)
+            completed_date = parse_date(t.get("completed_date"))
+            if completed_date and completed_date == today:
+                completed.append(t)
             continue
         if due and due < today:
             overdue.append(t)
@@ -436,8 +438,11 @@ def cmd_today():
 
 def cmd_this_week():
     today = date.today()
-    monday, _ = week_bounds(today)
+    monday, sunday = week_bounds(today)
     tasks = load_all_tasks()
+    # Exclude done tasks unless completed this week
+    tasks = [t for t in tasks if (t.get("status") or "").lower() != "done"
+             or (parse_date(t.get("completed_date")) and monday <= parse_date(t.get("completed_date")) <= sunday)]
     projects = load_projects()
 
     print(f"# 📊 Weekly Dashboard — Week of {monday}")
@@ -526,6 +531,9 @@ def cmd_this_week():
 def cmd_my_team():
     today = date.today()
     tasks = load_all_tasks()
+    # Exclude done tasks unless completed today
+    tasks = [t for t in tasks if (t.get("status") or "").lower() != "done"
+             or (parse_date(t.get("completed_date")) and parse_date(t.get("completed_date")) == today)]
     team = load_team()
 
     # Group by owner
@@ -550,7 +558,7 @@ def cmd_my_team():
         open_count = sum(1 for t in owner_tasks if (t.get("status") or "").lower() != "done")
         done_count = sum(1 for t in owner_tasks if (t.get("status") or "").lower() == "done")
         print(f"## {owner}{role_str}")
-        print(f"**Open tasks**: {open_count} | **Completed**: {done_count}")
+        print(f"**Open tasks**: {open_count} | **Completed today**: {done_count}")
         print()
         print("| ID | Task | Project | Stream | Priority | Status | Due | Days Open |")
         print("|----|------|---------|--------|----------|--------|-----|-----------|")
@@ -603,8 +611,8 @@ def cmd_my_team():
     # Summary table
     print("## Summary")
     print()
-    print("| Member | Open | In Progress | Blocked | Completed | Oldest Task (days) |")
-    print("|--------|------|-------------|---------|-----------|---------------------|")
+    print("| Member | Open | In Progress | Blocked | Completed Today | Oldest Task (days) |")
+    print("|--------|------|-------------|---------|-----------------|---------------------|")
     for owner in owners:
         owner_tasks = by_owner[owner]
         open_count = sum(1 for t in owner_tasks if (t.get("status") or "").lower() != "done")
