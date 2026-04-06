@@ -45,10 +45,10 @@ For each task ID:
    - Apply the requested changes to the YAML front matter
    - If reassigning `owner`, verify the name matches a team member in `data/team/*.md`. If no match, ask the user.
    - If changing `status` to `done`, also set `completed_date` to today's date (YYYY-MM-DD)
-   - If adding an update note, append under `### Updates` with today's date:
-     ```
-     - YYYY-MM-DD: <note>
-     ```
+   - If adding an update note, append under `### Updates` following the **Same-Day Updates** convention in `CLAUDE.md`:
+     - If no entry exists for today's date: add `- YYYY-MM-DD: <note>`
+     - If a single-line entry for today already exists: convert it to the grouped format and add the new note as a sub-bullet
+     - If a grouped entry for today already exists: append the new note as a sub-bullet
    - If no `### Updates` section exists, create one at the end of the file
 
 ### Step 4 — Show summary

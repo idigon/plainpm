@@ -93,6 +93,28 @@ blocked_by: [ALPHA-BE-001, ALPHA-003]
 - `completed_date`: set automatically when status changes to `done`
 - `created`: set when task/project/stream is created
 
+## Same-Day Updates
+
+When adding an update to `### Updates` and an entry for the same date already exists, **do not add a duplicate date line**. Instead, convert to a grouped format with sub-bullets:
+
+**Single update on a date (standard):**
+```
+- 2026-04-06: Completed API integration (source: [standup](path))
+```
+
+**Multiple updates on the same date (grouped):**
+```
+- 2026-04-06:
+  - Completed API integration (source: [standup](path))
+  - Decided to switch to REST instead of GraphQL (source: [architecture review](path))
+```
+
+Rules:
+- When adding an update and the latest entry has the same date as a single-line entry, convert it to the grouped format and add the new sub-bullet.
+- When adding an update and a grouped entry for that date already exists, append a new sub-bullet.
+- Different dates always get their own top-level bullet (`- YYYY-MM-DD:`).
+- Dashboards display the latest sub-bullet from the most recent date, with `(+N more)` appended when there are additional entries for that date.
+
 ## Working Days Calculation
 
 Working days = Mon–Fri only. Exclude weekends (Sat, Sun). No holiday calendar — just weekdays.
@@ -108,7 +130,7 @@ Used in `/my-team` to calculate "days open" for each task.
 - **Solo mode**: the user is the only team member; all other meeting attendees are external
 - **If uncertain** whether someone is team or external (team mode only): **ask the user** before proceeding
 - **Completeness over brevity**: meeting notes are the permanent record. Capture all topics discussed, all decisions (with context), all concerns raised, and all open questions. A longer note that misses nothing is always better than a concise one that drops details.
-- **Cross-reference updates**: after extracting action items, meeting processing identifies projects, streams, and existing tasks that were meaningfully discussed and proposes dated summary notes for their `### Updates` sections. The agent shows each proposed update alongside the entity's existing latest update, then asks the user to approve, edit, replace, or skip each one. This ensures the user stays in control — the existing update may be more important, or the user may want to merge both into a single entry. Format: `- YYYY-MM-DD: <summary> (source: [meeting title](path))`. Skip passing mentions with no substance.
+- **Cross-reference updates**: after extracting action items, meeting processing identifies projects, streams, and existing tasks that were meaningfully discussed and proposes dated summary notes for their `### Updates` sections. The agent shows each proposed update alongside the entity's existing latest update, then asks the user to approve, edit, replace, or skip each one. This ensures the user stays in control — the existing update may be more important, or the user may want to merge both into a single entry. Format: `- YYYY-MM-DD: <summary> (source: [meeting title](path))`. Skip passing mentions with no substance. See **Same-Day Updates** below for handling multiple updates on the same date.
 
 ## Meeting Areas
 

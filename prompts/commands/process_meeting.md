@@ -127,6 +127,7 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
       - The **existing latest update** (the last entry currently under `### Updates`), so the user can see what's already there. If there are no existing updates, say "(no existing updates)".
       - The **proposed new update** — format: `- YYYY-MM-DD: <concise summary> (source: [meeting title](relative-path-to-meeting-notes))`
       - Keep each proposed entry to 1-2 sentences. The meeting notes have the full detail; the update is a pointer and quick summary.
+      - **Same-day handling**: if the entity already has an update for today's date, follow the **Same-Day Updates** convention in `CLAUDE.md` — convert to grouped format with sub-bullets instead of adding a duplicate date.
 
       Display this as a clear list, for example:
       ```
