@@ -91,14 +91,27 @@ def extract_title(filepath: Path) -> str:
 
 
 def extract_latest_update(filepath: Path) -> str | None:
-    """Return the most recent dated bullet from the Updates section of a stream file."""
+    """Return the most recent dated update from the Updates section.
+
+    Handles both single-line and grouped (sub-bullet) formats:
+        - 2026-04-06: Single update text
+        - 2026-04-06:
+          - First sub-bullet
+          - Second sub-bullet
+
+    For grouped entries, returns the last sub-bullet with "(+N more)" appended
+    when there are additional entries for that date.
+    """
     try:
         text = filepath.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return None
     in_updates = False
     latest_date = None
-    latest_text = None
+    latest_subitems: list[str] = []
+    current_date = None
+    current_subitems: list[str] = []
+
     for line in text.splitlines():
         if re.match(r"^#{2,4}\s+Updates", line):
             in_updates = True
@@ -106,15 +119,44 @@ def extract_latest_update(filepath: Path) -> str | None:
         if in_updates and re.match(r"^#{1,4}\s+", line):
             break
         if in_updates:
+            # Top-level date bullet with inline text: - 2026-04-06: some text
             m = re.match(r"^-\s+(\d{4}-\d{2}-\d{2}):\s+(.+)", line)
             if m:
-                d, txt = m.group(1), m.group(2).strip()
-                if latest_date is None or d > latest_date:
-                    latest_date = d
-                    latest_text = txt
-    if latest_date and latest_text:
-        return f"{latest_date}: {latest_text}"
-    return None
+                # Save previous date group if it's the latest
+                if current_date and (latest_date is None or current_date > latest_date):
+                    latest_date = current_date
+                    latest_subitems = current_subitems[:]
+                current_date = m.group(1)
+                current_subitems = [m.group(2).strip()]
+                continue
+            # Top-level date bullet without inline text: - 2026-04-06:
+            m = re.match(r"^-\s+(\d{4}-\d{2}-\d{2}):\s*$", line)
+            if m:
+                if current_date and (latest_date is None or current_date > latest_date):
+                    latest_date = current_date
+                    latest_subitems = current_subitems[:]
+                current_date = m.group(1)
+                current_subitems = []
+                continue
+            # Sub-bullet under a date: "  - sub item text"
+            m = re.match(r"^\s+-\s+(.+)", line)
+            if m and current_date:
+                current_subitems.append(m.group(1).strip())
+                continue
+
+    # Don't forget the last date group
+    if current_date and (latest_date is None or current_date > latest_date):
+        latest_date = current_date
+        latest_subitems = current_subitems[:]
+
+    if not latest_date or not latest_subitems:
+        return None
+
+    last_item = latest_subitems[-1]
+    count = len(latest_subitems)
+    if count > 1:
+        return f"{latest_date}: {last_item} (+{count - 1} more)"
+    return f"{latest_date}: {last_item}"
 
 
 # ---------------------------------------------------------------------------
