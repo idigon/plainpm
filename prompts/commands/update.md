@@ -29,7 +29,7 @@ Extract from the user's input:
 Supported fields:
 - `status`: must be one of `todo`, `in-progress`, `blocked`, `done`
 - `priority`: must be one of `critical`, `high`, `medium`, `low`
-- `owner`: match to a team member's `first_name`. Self-references ("me", "my", "myself") resolve to the current user — in solo mode (one team member), that's the only person; in team mode, resolve to the member with `self: true`. If no `self: true` exists, ask.
+- `owners`: list of team member `first_name` values. Self-references ("me", "my", "myself") resolve to the current user. When assigning multiple owners and `completion_mode` is not specified, ask: "Should this task be done when any one person completes it (`any`), or does each person need to complete it independently (`all`)?" Update `completion_mode` accordingly.
 - `due_date`: parse relative dates ("Friday" -> next Friday, "next week" -> next Monday). Format as YYYY-MM-DD.
 - `tags`: append new tags to existing list (do not remove existing tags)
 - `blocked_by`: add or remove task IDs from the dependency list. Verify referenced IDs exist before adding. When removing, also check if this resolves all dependencies and suggest unblocking.
@@ -43,7 +43,7 @@ For each task ID:
 2. **If not found**: tell the user the task ID was not found and skip it.
 3. **If found**:
    - Apply the requested changes to the YAML front matter
-   - If reassigning `owner`, verify the name matches a team member in `data/team/*.md`. If no match, ask the user.
+   - If reassigning `owners`, verify each name matches a team member in `data/team/*.md`. If any name doesn't match, ask the user.
    - If changing `status` to `done`, also set `completed_date` to today's date (YYYY-MM-DD)
    - If adding an update note, append under `### Updates` following the **Same-Day Updates** convention in `CLAUDE.md`:
      - If no entry exists for today's date: add `- YYYY-MM-DD: <note>`

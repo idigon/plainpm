@@ -34,8 +34,12 @@ For each task ID:
 1. **Find the task file** by scanning `data/projects/**/tasks/**/*.md` and `data/tasks/**/*.md` for a file whose YAML front matter contains a matching `id` field.
 2. **If not found**: tell the user the task ID was not found and skip it.
 3. **If found**:
-   - Set `status: done` in the front matter
-   - Set `completed_date` to today's date (YYYY-MM-DD)
+   - **Check `completion_mode` and `owners`**:
+     - If `completion_mode: all` and `owners` has more than one member:
+       - If the user did not specify who is marking the task done, ask: "Who is marking this done?" (list the owners who have not yet completed it).
+       - Update `completions.<member>` to today's date in the front matter.
+       - If **all** members now have a completion date, set `status: done` and `completed_date` to today. Otherwise, leave `status: in-progress`.
+     - Otherwise (`completion_mode: any` or single owner): set `status: done` and `completed_date` to today's date.
    - If the user provided a closing note, append it under the `### Updates` section with today's date:
      ```
      - YYYY-MM-DD: <closing note>

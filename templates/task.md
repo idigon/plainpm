@@ -3,7 +3,8 @@ id:
 type: task
 project:
 stream:
-owner:
+owners: []
+completion_mode: any
 status: todo
 priority: medium
 due_date:

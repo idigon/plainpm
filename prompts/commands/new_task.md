@@ -46,7 +46,10 @@ Then inform the user:
 ### Parse from the input:
 - **Title**: concise task title
 - **Description**: fuller description if provided
-- **Owner**: match to a team member by first name. Self-references ("me", "my", "I", "myself") resolve to the current user — in solo mode (one team member), that's the only person; in team mode, resolve to the member with `self: true`. If no `self: true` exists, ask.
+- **Owner(s)**: match to one or more team members by first name. Self-references ("me", "my", "I", "myself") resolve to the current user — in solo mode (one team member), that's the only person; in team mode, resolve to the member with `self: true`. If no `self: true` exists, ask.
+  - If multiple owners are given, ask: "Should this task be done when any one person completes it (`any`), or does each person need to complete it independently (`all`)?" — unless the user already specified.
+  - Use the `owners` array in the task front matter (e.g., `owners: [Alice, Bob]`). Single-owner tasks are expressed as a one-element array: `owners: [Alice]`.
+  - Set `completion_mode: any` or `completion_mode: all` accordingly. Default is `any`.
 - **Project**: match to existing project; if unclear or new, ask. If the task doesn't belong to any project (e.g., from an area meeting or a personal to-do), it's a **standalone task** — leave project empty.
 - **Stream**: match to existing stream within the project; if unclear, ask. Leave empty for project-level or standalone tasks.
 - **Priority**: default `medium` unless specified
@@ -79,6 +82,6 @@ Then inform the user:
 
 ### If anything is ambiguous:
 - Ask the user to clarify before creating the file
-- Common ambiguities: which project, which stream, who is the owner
+- Common ambiguities: which project, which stream, who is the owner, `completion_mode` when multiple owners are given
 
 $ARGUMENTS

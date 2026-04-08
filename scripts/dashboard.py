@@ -63,6 +63,21 @@ def parse_front_matter(filepath: Path) -> dict:
                 fm[key] = [v.strip().strip('"').strip("'") for v in inner.split(",")]
             else:
                 fm[key] = []
+        # Handle inline maps like {Alice: 2026-04-08, Bob: null}
+        elif val.startswith("{"):
+            inner = val.strip("{}").strip()
+            if inner:
+                mapping = {}
+                for pair in inner.split(","):
+                    pair = pair.strip()
+                    if ":" in pair:
+                        k, _, v = pair.partition(":")
+                        k = k.strip().strip('"').strip("'")
+                        v = v.strip().strip('"').strip("'")
+                        mapping[k] = None if v == "null" or v == "" else v
+                fm[key] = mapping
+            else:
+                fm[key] = {}
         # Handle empty values
         elif val == "" or val == "null":
             fm[key] = None
@@ -305,6 +320,43 @@ PRIORITY_ICONS = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "
 STATUS_ICONS = {"todo": "⬚", "in-progress": "🔄", "blocked": "🚫", "done": "✅"}
 
 
+def task_owners(task: dict) -> list[str]:
+    """Return the list of owner first_names for a task.
+
+    Supports both the new 'owners' array field and the legacy 'owner' string field.
+    Returns ['Unassigned'] when no owner is set.
+    """
+    owners = task.get("owners")
+    if isinstance(owners, list) and owners:
+        return owners
+    # Legacy single-owner field
+    legacy = task.get("owner")
+    if legacy and isinstance(legacy, str):
+        return [legacy]
+    return ["Unassigned"]
+
+
+def fmt_owners(task: dict) -> str:
+    """Format the owners for display in dashboard tables.
+
+    For completion_mode: all tasks, appends ✅ / ⬚ per member if completions exist.
+    """
+    owners = task_owners(task)
+    mode = (task.get("completion_mode") or "any").lower()
+    completions = task.get("completions")
+
+    if mode == "all" and isinstance(completions, dict):
+        parts = []
+        for o in owners:
+            done = completions.get(o)
+            icon = "✅" if done and done != "null" else "⬚"
+            parts.append(f"{o} {icon}")
+        return " / ".join(parts)
+
+    return " / ".join(owners)
+
+
+
 def priority_sort_key(task: dict):
     p = (task.get("priority") or "medium").lower()
     due = task.get("due_date") or "9999-99-99"
@@ -470,7 +522,7 @@ def cmd_today():
                 for t in grouped[proj][stream]:
                     tid = t.get("id") or "???"
                     title = t["_title"]
-                    owner = t.get("owner") or "Unassigned"
+                    owner = fmt_owners(t)
                     update = fmt_latest_update(t)
                     blocked_by = t.get("blocked_by") or []
                     if has_deps:
@@ -538,7 +590,7 @@ def cmd_this_week():
                 for t in stream_tasks:
                     tid = t.get("id") or "???"
                     title = t["_title"]
-                    owner = t.get("owner") or "Unassigned"
+                    owner = fmt_owners(t)
                     print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} | {fmt_latest_update(t)} |")
             else:
                 print("No open tasks.")
@@ -555,7 +607,7 @@ def cmd_this_week():
             for t in plevel:
                 tid = t.get("id") or "???"
                 title = t["_title"]
-                owner = t.get("owner") or "Unassigned"
+                owner = fmt_owners(t)
                 print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} | {fmt_latest_update(t)} |")
             print()
 
@@ -573,7 +625,7 @@ def cmd_this_week():
         for t in standalone:
             tid = t.get("id") or "???"
             title = t["_title"]
-            owner = t.get("owner") or "Unassigned"
+            owner = fmt_owners(t)
             print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} | {fmt_latest_update(t)} |")
         print()
         print("---")
@@ -592,11 +644,11 @@ def cmd_my_team():
              or (parse_date(t.get("completed_date")) and parse_date(t.get("completed_date")) == today)]
     team = load_team()
 
-    # Group by owner
+    # Group by owner — multi-owner tasks appear under each assigned member
     by_owner = defaultdict(list)
     for t in tasks:
-        owner = t.get("owner") or "Unassigned"
-        by_owner[owner].append(t)
+        for owner in task_owners(t):
+            by_owner[owner].append(t)
 
     print(f"# 👥 Team Workload — {today}")
     print()
@@ -729,7 +781,7 @@ def cmd_weekly_report():
             tid = t.get("id") or "???"
             title = t["_title"]
             proj = project_display_name(t.get("project") or "")
-            owner = t.get("owner") or "Unassigned"
+            owner = fmt_owners(t)
             cd = t.get("completed_date") or "?"
             print(f"| {tid} | {title} | {proj} | {owner} | {cd} | {fmt_latest_update(t)} |")
     else:
@@ -747,7 +799,7 @@ def cmd_weekly_report():
             tid = t.get("id") or "???"
             title = t["_title"]
             proj = project_display_name(t.get("project") or "")
-            owner = t.get("owner") or "Unassigned"
+            owner = fmt_owners(t)
             print(f"| {tid} | {title} | {proj} | {owner} | {fmt_priority(t)} | {fmt_due(t)} | {fmt_latest_update(t)} |")
     else:
         print("None")
@@ -764,7 +816,7 @@ def cmd_weekly_report():
             tid = t.get("id") or "???"
             title = t["_title"]
             proj = project_display_name(t.get("project") or "")
-            owner = t.get("owner") or "Unassigned"
+            owner = fmt_owners(t)
             created = t.get("created") or "?"
             print(f"| {tid} | {title} | {proj} | {owner} | {fmt_priority(t)} | {created} | {fmt_latest_update(t)} |")
     else:
@@ -782,7 +834,7 @@ def cmd_weekly_report():
             tid = t.get("id") or "???"
             title = t["_title"]
             proj = project_display_name(t.get("project") or "")
-            owner = t.get("owner") or "Unassigned"
+            owner = fmt_owners(t)
             print(f"| {tid} | {title} | {proj} | {owner} | {fmt_priority(t)} | {fmt_due(t)} | {fmt_latest_update(t)} |")
     else:
         print("None")

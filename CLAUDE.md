@@ -73,6 +73,47 @@ links: [{label: "Jira ticket", url: "https://jira.example.com/ALPHA-123"}, {labe
 
 When rendering links in reports or dashboards, output them as markdown hyperlinks: `[label](url)`.
 
+## Multi-Owner Tasks
+
+Tasks can be assigned to multiple team members at once using the `owners` array (replaces the old `owner` field):
+
+```yaml
+owners: [Alice, Bob, Carlos]
+completion_mode: any
+```
+
+- `owners`: list of `first_name` values from `data/team/*.md`. Use an empty list `[]` for unassigned. Single-owner tasks are still expressed as a one-element array: `owners: [Alice]`.
+- `completion_mode`: controls how the task is considered done:
+  - `any` (default) — the task is done when **any one** of the assigned members marks it complete. E.g., a task assigned to several people where only one needs to do it.
+  - `all` — the task is done only when **every** assigned member has independently completed it. Partial completion is tracked in a `completions` map in the front matter (see below).
+
+### `completion_mode: all` — partial completion tracking
+
+When `completion_mode: all`, the front matter includes a `completions` map that tracks which members have completed their part:
+
+```yaml
+owners: [Alice, Bob]
+completion_mode: all
+completions: {Alice: 2026-04-08, Bob: null}
+```
+
+- Each key is a member `first_name`; value is the `completed_date` (YYYY-MM-DD) or `null` if not yet done.
+- The task's `status` becomes `done` and `completed_date` is set only when **all** values in `completions` are non-null.
+- When a member marks their part done, their entry in `completions` is updated but `status` stays `in-progress` until everyone is done.
+- When the agent runs `/done`, if the task has `completion_mode: all` and multiple owners, it asks: "Who is marking this done?" (unless the user specifies a name).
+
+### Displaying multi-owner tasks
+
+- **All dashboards**: the Owner column shows the owners joined with ` / ` (e.g., `Alice / Bob`).
+- For `completion_mode: all` tasks, the Owner column shows completion state: `Alice ✅ / Bob ⬚`.
+- **Team dashboard (`my_team`)**: a multi-owner task appears in **each** assigned member's section.
+
+### When `completion_mode` is unclear, ask the user
+
+If the user assigns a task to multiple people and does not specify `completion_mode`, ask:
+
+> "Should this task be done when any one person completes it (`any`), or does each person need to complete it independently (`all`)?"
+
 ## Dependencies
 
 Tasks can declare dependencies via a `blocked_by` array of task IDs:
