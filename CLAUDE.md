@@ -173,16 +173,33 @@ Used in `/my-team` to calculate "days open" for each task.
 - **Completeness over brevity**: meeting notes are the permanent record. Capture all topics discussed, all decisions (with context), all concerns raised, and all open questions. A longer note that misses nothing is always better than a concise one that drops details.
 - **Cross-reference updates**: after extracting action items, meeting processing identifies projects, streams, and existing tasks that were meaningfully discussed and proposes dated summary notes for their `### Updates` sections. The agent shows each proposed update alongside the entity's existing latest update, then asks the user to approve, edit, replace, or skip each one. This ensures the user stays in control — the existing update may be more important, or the user may want to merge both into a single entry. Format: `- YYYY-MM-DD: <summary> (source: [meeting title](path))`. Skip passing mentions with no substance. See **Same-Day Updates** below for handling multiple updates on the same date.
 
+## Notes
+
+Notes are the general-purpose content type for capturing information outside of meetings — decisions, processes, observations, team management topics, or anything worth recording. Notes can live in areas, projects, or streams.
+
+- Notes use `templates/note.md` and have `type: note` in front matter (vs `type: meeting` for meeting notes).
+- Notes and meeting notes share the same `notes/YYYY/MM/` folders — the `type` field distinguishes them.
+- Create notes with `/new-note` or manually.
+- Notes can optionally trigger cross-reference updates and task creation, just like meeting notes.
+
+### Note locations
+
+- **Area note**: `data/meetings/areas/<area-slug>/notes/YYYY/MM/YYYY-MM-DD-title.md`
+- **Project note**: `data/projects/<slug>/meetings/YYYY/MM/YYYY-MM-DD-title.md`
+- **Stream note**: `data/projects/<slug>/streams/<stream-slug>/notes/YYYY/MM/YYYY-MM-DD-title.md`
+
+Stream notes are a new location — create the `notes/YYYY/MM/` subfolder inside the stream directory as needed.
+
 ## Meeting Areas
 
-Meeting areas are named groupings for recurring meetings that don't belong to a specific project — e.g., team syncs, partner engagements, 1:1s, all-hands, vendor calls.
+Meeting areas are named groupings for recurring meetings that don't belong to a specific project — e.g., team syncs, partner engagements, 1:1s, all-hands, vendor calls. Areas also hold manually created notes on the same topics.
 
 - Each area is a folder under `data/meetings/areas/<area-slug>/`
 - Each area has an `area.md` definition file (metadata + description)
 - Notes go in `data/meetings/areas/<area-slug>/notes/YYYY/MM/`
 - Area slugs use lowercase-kebab-case (e.g., `team-syncs`, `partner-engagements`)
 - **To create a new area**: create the folder, add `area.md` (from `templates/area.md`), and start dropping notes in.
-- The `area` field in meeting note front matter references the area slug (leave blank for project meetings or unstructured general notes).
+- The `area` field in note front matter references the area slug (leave blank for project notes or unstructured general notes).
 - Areas are independent of projects — no project file or task ID prefix is needed.
 - **Area folders only contain `area.md` and `notes/`** — never put task files inside an area folder.
 - Task creation rules from meeting processing still apply: only team members' action items become tasks. Tasks go to the relevant project/stream, or to `data/tasks/YYYY/` as standalone tasks (`TASK-NNN`) if no project context applies.
@@ -217,6 +234,7 @@ When creating new files, always place them in the correct subfolder matching the
 | Processed notes (general) | `data/meetings/notes/YYYY/MM/` |
 | Processed notes (area) | `data/meetings/areas/<area-slug>/notes/YYYY/MM/` |
 | Processed notes (project) | `data/projects/<slug>/meetings/YYYY/MM/` |
+| Stream notes | `data/projects/<slug>/streams/<stream-slug>/notes/YYYY/MM/` |
 | Area definitions | `data/meetings/areas/<area-slug>/area.md` |
 | Dashboard reports | `data/reports/<type>/YYYY/MM/` |
 | Archived tasks | `data/archive/<project-slug>/YYYY/*.md` |
@@ -260,6 +278,7 @@ Command prompts live in `prompts/commands/`. Each file contains the full instruc
 | today | `prompts/commands/today.md` | Daily dashboard |
 | this_week | `prompts/commands/this_week.md` | Weekly dashboard |
 | new-task | `prompts/commands/new_task.md` | Create task from natural language |
+| new-note | `prompts/commands/new_note.md` | Create a note in an area, project, or stream |
 | process-meeting | `prompts/commands/process_meeting.md` | Process .vtt/.md into notes + tasks |
 | status | `prompts/commands/status.md` | Project status report |
 | my-team | `prompts/commands/my_team.md` | Team workload view |

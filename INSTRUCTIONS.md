@@ -33,7 +33,7 @@ Open your AI coding agent from the project root directory so it picks up the con
 
 ### Data directory setup
 
-All user data lives in the `data/` subdirectory. If it doesn't exist yet, any write command (`/new-task`, `/process-meeting`) will offer to create it for you.
+All user data lives in the `data/` subdirectory. If it doesn't exist yet, any write command (`/new-task`, `/new-note`, `/process-meeting`) will offer to create it for you.
 
 To set it up manually:
 ```
@@ -67,6 +67,7 @@ Command prompts are in `prompts/commands/`. In Claude Code, these are wired as `
 | my-team | `prompts/commands/my_team.md` | Team workload — tasks per person with days-open count |
 | weekly-report | `prompts/commands/weekly_report.md` | Week summary — completed, in-progress, blocked, new tasks |
 | new-task | `prompts/commands/new_task.md` | Create a task from natural language |
+| new-note | `prompts/commands/new_note.md` | Create a note in an area, project, or stream |
 | process-meeting | `prompts/commands/process_meeting.md` | Process a .vtt transcript or .md notes into structured notes + tasks |
 | status | `prompts/commands/status.md` | Project status report (one project or all) |
 | done | `prompts/commands/done.md` | Mark task(s) as done |
@@ -108,6 +109,25 @@ The command will:
 - Append update notes to any projects, streams, or existing tasks that were discussed (see [Cross-reference updates](#cross-reference-updates))
 - List external attendees' action items in the notes only (no task files)
 - Ask you about anything unclear
+
+### new-note
+
+Create a note (not from a meeting) in any area, project, or stream:
+
+```
+"Add a note to the team area about onboarding process changes"
+"Note in project alpha: decided to switch to PostgreSQL"
+"Note for project beta backend stream: API versioning strategy"
+"Team management note: performance review cycle starts next month"
+```
+
+The command will:
+- Match the target area, project, or stream
+- Create the note file in the right `notes/YYYY/MM/` subfolder
+- Optionally propose cross-reference updates to the parent entity
+- Optionally create tasks if the note contains action items
+
+Notes use `type: note` in front matter (vs `type: meeting` for meeting notes) and share the same folder structure.
 
 ### status
 
