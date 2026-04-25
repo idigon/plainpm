@@ -60,6 +60,8 @@ mkdir -p data/projects data/team data/meetings/transcripts data/meetings/notes d
 
 Command prompts are in `prompts/commands/`. In Claude Code, these are wired as `/slash-commands`. In other agents, ask for them by name (e.g., "run today dashboard", "create a new task", "process this meeting").
 
+**Natural-language usage (Claude Code only).** Seven of the commands — `new-task`, `update`, `done`, `process-meeting`, `archive`, `status`, and `new-note` — are also exposed as skills, so you can just describe what you want and the right one will load automatically. For example, "Ana needs to fix the login bug by Friday" triggers `new-task`, and "mark ALPHA-001 done" triggers `done`. The slash commands still work the same way; skills are an alternative entry point, not a replacement. The four dashboards (`today`, `this_week`, `my-team`, `weekly-report`) and `agenda` remain slash-only.
+
 | Command | Prompt file | What it does |
 |---------|-------------|-------------|
 | today | `prompts/commands/today.md` | Daily dashboard — overdue, due today, in-progress, blocked, not started |
