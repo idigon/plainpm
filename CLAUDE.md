@@ -240,6 +240,7 @@ When creating new files, always place them in the correct subfolder matching the
 | Archived tasks | `data/archive/<project-slug>/YYYY/*.md` |
 | Archived standalone tasks | `data/archive/_standalone/YYYY/*.md` |
 | Slash commands | `.claude/commands/` |
+| Skills (auto-loaded) | `.claude/skills/<name>/SKILL.md` |
 
 ## Project Slugs
 
@@ -288,7 +289,7 @@ Command prompts live in `prompts/commands/`. Each file contains the full instruc
 | agenda | `prompts/commands/agenda.md` | Generate meeting agenda from open tasks |
 | archive | `prompts/commands/archive.md` | Archive old completed tasks |
 
-In Claude Code these are also wired as slash commands via `.claude/commands/`.
+In Claude Code these are wired as slash commands via `.claude/commands/`. Seven of them — `new-task`, `update`, `done`, `process-meeting`, `archive`, `status`, and `new-note` — are **also** exposed as skills under `.claude/skills/`, so they auto-load when the user describes the action in natural language (e.g., "Ana needs to fix the login bug by Friday" → `new-task`). Slash commands and skills coexist and share the same source-of-truth prompt files in `prompts/commands/`. The four dashboards (`today`, `this_week`, `my_team`, `weekly_report`) and `agenda` remain slash-only since they're deliberate, explicit invocations.
 
 ## Multi-Agent Support
 
