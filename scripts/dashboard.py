@@ -377,7 +377,13 @@ def fmt_status(task: dict) -> str:
 
 def fmt_due(task: dict) -> str:
     d = task.get("due_date")
-    return d if d else "No due date"
+    if not d:
+        return "No due date"
+    due = parse_date(d)
+    status = (task.get("status") or "").lower()
+    if due and due < date.today() and status != "done":
+        return f"⚠️ {d}"
+    return d
 
 
 MAX_UPDATE_LEN = 60
@@ -680,8 +686,7 @@ def cmd_my_team():
                 stream = stream_display_name(t.get("project") or "", stream)
             created = parse_date(t.get("created"))
             days = working_days_between(created, today) if created else "?"
-            warn = "⚠️ " if isinstance(days, int) and days > 14 else ""
-            print(f"| {warn}{tid} | {title} | {proj} | {stream} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} | {days} | {fmt_latest_update(t)} |")
+            print(f"| {tid} | {title} | {proj} | {stream} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} | {days} | {fmt_latest_update(t)} |")
 
         print()
         print("---")
