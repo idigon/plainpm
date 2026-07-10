@@ -114,6 +114,24 @@ If the user assigns a task to multiple people and does not specify `completion_m
 
 > "Should this task be done when any one person completes it (`any`), or does each person need to complete it independently (`all`)?"
 
+## Project & Stream Ownership
+
+Projects and streams can have owners, and co-ownership is supported. Ownership is expressed with an `owners` array in the `project.md` / `stream.md` front matter — the same convention as tasks:
+
+```yaml
+owners: [Alice, Bob]
+```
+
+- `owners`: list of `first_name` values from `data/team/*.md`. Use an empty list `[]` for unassigned. A single owner is a one-element array: `owners: [Alice]`. Two or more entries mean co-ownership.
+- Owner names must match a team member's `first_name`. Self-references ("me", "my", "I", "myself") resolve to the current user (the member with `self: true`, or the only member in solo mode).
+- Project/stream ownership is independent of task ownership. Owning a project does **not** imply owning its tasks, and vice versa.
+- Unlike tasks, projects and streams have **no** `completion_mode` — co-owners simply share responsibility; there is no per-owner completion tracking.
+
+### Displaying project/stream owners
+
+- The **team dashboard (`my_team`)** and **weekly report (`weekly_report`)** show an Owner column in their Project Status and Stream Status tables. Co-owners are joined with ` / ` (e.g., `Alice / Bob`); an unassigned project/stream shows `Unassigned`.
+- The `/status` report shows the owner(s) for the project and for each stream.
+
 ## Dependencies
 
 Tasks can declare dependencies via a `blocked_by` array of task IDs:
@@ -248,13 +266,14 @@ Use lowercase-kebab-case for all folder names (e.g., `project-alpha`, `backend-a
 
 ## Dashboard Scripts
 
-The four read-only dashboards are powered by `scripts/dashboard.py` (Python, stdlib only). This ensures speed, determinism, and no token cost for scanning tasks.
+The read-only dashboards are powered by `scripts/dashboard.py` (Python, stdlib only). This ensures speed, determinism, and no token cost for scanning tasks.
 
 ```
-python scripts/dashboard.py today         # Daily dashboard
-python scripts/dashboard.py this_week     # Weekly dashboard
-python scripts/dashboard.py my_team       # Team workload + days open
-python scripts/dashboard.py weekly_report # Week summary
+python scripts/dashboard.py today          # Daily dashboard
+python scripts/dashboard.py this_week      # Weekly dashboard
+python scripts/dashboard.py my_team        # Team workload + days open
+python scripts/dashboard.py weekly_report  # Week summary
+python scripts/dashboard.py owner <name>   # Projects/streams owned by a person
 ```
 
 The slash commands for these dashboards invoke the script and display its output.
@@ -267,6 +286,7 @@ Every run automatically saves a snapshot to `data/reports/`:
 | `this_week` | `data/reports/weekly/YYYY/MM/YYYY-MM-DD-weekly.md` | Monday of the week |
 | `my_team` | `data/reports/team/YYYY/MM/YYYY-MM-DD-team.md` | Today |
 | `weekly_report` | `data/reports/weekly-report/YYYY/MM/YYYY-MM-DD-weekly-report.md` | Monday of the week |
+| `owner <name>` | `data/reports/owner/YYYY/MM/YYYY-MM-DD-<owner-slug>-owner.md` | Today |
 
 Running the same command twice on the same day overwrites the previous snapshot for that date.
 
@@ -283,13 +303,16 @@ Command prompts live in `prompts/commands/`. Each file contains the full instruc
 | process-meeting | `prompts/commands/process_meeting.md` | Process .vtt/.md into notes + tasks |
 | status | `prompts/commands/status.md` | Project status report |
 | my-team | `prompts/commands/my_team.md` | Team workload view |
+| owner-report | `prompts/commands/owner_report.md` | Project/stream statuses owned by a specific person |
 | weekly-report | `prompts/commands/weekly_report.md` | Weekly summary |
 | done | `prompts/commands/done.md` | Mark task(s) as done |
-| update | `prompts/commands/update.md` | Batch update tasks from natural language |
+| update | `prompts/commands/update.md` | Batch update tasks, projects, and streams from natural language |
 | agenda | `prompts/commands/agenda.md` | Generate meeting agenda from open tasks |
 | archive | `prompts/commands/archive.md` | Archive old completed tasks |
 
 In Claude Code these are wired as slash commands via `.claude/commands/`. Seven of them — `new-task`, `update`, `done`, `process-meeting`, `archive`, `status`, and `new-note` — are **also** exposed as skills under `.claude/skills/`, so they auto-load when the user describes the action in natural language (e.g., "Ana needs to fix the login bug by Friday" → `new-task`). Slash commands and skills coexist and share the same source-of-truth prompt files in `prompts/commands/`. The four dashboards (`today`, `this_week`, `my_team`, `weekly_report`) and `agenda` remain slash-only since they're deliberate, explicit invocations.
+
+Commands can be invoked either explicitly (e.g., `/owner-report`) or by **natural language** — every agent routes plain-language requests to the right prompt via its own request→prompt table (`AGENTS.md`, `.github/copilot-instructions.md`, `.cursor/rules/plainpm.mdc`, `.windsurf/rules/plainpm.md`) and the Commands table above. This keeps the behavior agent-agnostic; a single `prompts/commands/*.md` file is the source of truth for each command. Do **not** add Claude-only `.claude/skills/` entries for these — that would work only in Claude Code and duplicate the prompt.
 
 ## Multi-Agent Support
 

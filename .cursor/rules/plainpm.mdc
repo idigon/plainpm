@@ -31,7 +31,9 @@ Command prompts are in `prompts/commands/`. When the user asks to run a command,
 | "Run weekly dashboard" or "this week" | `prompts/commands/this_week.md` |
 | "Show team workload" or "my team" | `prompts/commands/my_team.md` |
 | "Weekly report" | `prompts/commands/weekly_report.md` |
+| "Owner report" or "projects/streams owned by X" | `prompts/commands/owner_report.md` |
 | "Create a new task" + description | `prompts/commands/new_task.md` |
+| "Create a note" + area/project/stream | `prompts/commands/new_note.md` |
 | "Process meeting" + file path | `prompts/commands/process_meeting.md` |
 | "Project status" + optional project | `prompts/commands/status.md` |
 | "Done" + task ID(s) | `prompts/commands/done.md` |

@@ -1,6 +1,7 @@
 ---
 type: project
 status: active
+owners: []
 summary:
 created:
 links: []

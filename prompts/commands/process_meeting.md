@@ -78,7 +78,7 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
    - **If it's an area meeting**: the `area` field in notes front matter = area slug; `project` = blank. Notes go in `data/meetings/areas/<area-slug>/notes/YYYY/MM/`.
    - **If no area is indicated**: check if the meeting is associated with a specific project. Ask the user to confirm which project (and stream, if applicable).
    - If the meeting spans multiple projects, ask the user which project each action item belongs to.
-   - If a new project or stream is needed, create it (folder + project.md/stream.md from templates, update `data/projects/_index.md`).
+   - If a new project or stream is needed, create it (folder + project.md/stream.md from templates, update `data/projects/_index.md`). Set the `owners` array on the new project/stream: if the meeting or user indicates an owner, use it; otherwise ask who owns it (accepting "unassigned" / `owners: []`). Owner names must match a team member's `first_name`, and are independent of any task owners.
    - If a **new area** is needed: create the folder `data/meetings/areas/<area-slug>/`, write `area.md` from `templates/area.md` (fill in slug, summary, created date), and create the `notes/` subfolder.
 
 7. **Create task files for team members' action items** (including yourself — in solo mode, that means only your own action items):
@@ -93,7 +93,7 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
       - `id`: the generated ID
       - `project`: project slug (or empty for standalone tasks)
       - `stream`: stream slug (or empty for project-level/standalone)
-      - `owner`: team member's first_name (as it appears in their `data/team/*.md`)
+      - `owners`: one-element array with the team member's first_name as it appears in their `data/team/*.md` (e.g., `owners: [Ana]`). If the action item is jointly owned by multiple team members, list them all and set `completion_mode` (`any` by default; `all` if each must complete their part independently).
       - `status`: `todo`
       - `priority`: `medium` (unless the meeting context suggests otherwise — e.g., urgent/blocking items → `high` or `critical`)
       - `created`: today's date (YYYY-MM-DD)

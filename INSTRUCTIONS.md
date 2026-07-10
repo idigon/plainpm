@@ -67,6 +67,7 @@ Command prompts are in `prompts/commands/`. In Claude Code, these are wired as `
 | today | `prompts/commands/today.md` | Daily dashboard — overdue, due today, in-progress, blocked, not started |
 | this_week | `prompts/commands/this_week.md` | Weekly dashboard — all projects, streams, and tasks in tables |
 | my-team | `prompts/commands/my_team.md` | Team workload — tasks per person with days-open count |
+| owner-report | `prompts/commands/owner_report.md` | Projects & streams owned by a specific person, with statuses |
 | weekly-report | `prompts/commands/weekly_report.md` | Week summary — completed, in-progress, blocked, new tasks |
 | new-task | `prompts/commands/new_task.md` | Create a task from natural language |
 | new-note | `prompts/commands/new_note.md` | Create a note in an area, project, or stream |
@@ -138,6 +139,18 @@ Notes use `type: note` in front matter (vs `type: meeting` for meeting notes) an
 "Portfolio status"                    # Summary across all projects
 ```
 
+### owner-report
+
+Report the projects and streams a specific person owns (co-owned entities included), each with its status and open/blocked task counts:
+
+```
+"What does Ana own?"
+"Owner report for Bob"
+"Which projects and streams am I the owner of?"   ← self-reference
+```
+
+Names resolve to a team member's `first_name`; "me"/"my"/"I" resolve to you. The report is also saved under `data/reports/owner/`.
+
 ### done
 
 Mark one or more tasks as done in a single command:
@@ -152,16 +165,18 @@ The command sets `status: done` and `completed_date` to today. If you include a 
 
 ### update
 
-Batch update tasks from natural language:
+Batch update tasks, projects, and streams from natural language:
 
 ```
 "Move ALPHA-BE-001 to in-progress"
 "Reassign ALPHA-002 to Carlos, raise priority to high"
 "Set ALPHA-BE-001 due date to next Friday"
 "ALPHA-BE-001: blocked — waiting on API credentials"
+"Set the owner of project alpha to Ana"
+"Make Ana and Bob co-owners of the backend stream in project alpha"
 ```
 
-Supports changing `status`, `priority`, `owner`, `due_date`, `tags`, and adding update notes. If anything is ambiguous, the command will ask you to clarify.
+For **tasks**, supports changing `status`, `priority`, `owners`, `due_date`, `tags`, dependencies, and adding update notes. For **projects and streams**, supports changing `owners` (co-ownership allowed) and `status`. If anything is ambiguous, the command will ask you to clarify.
 
 ### agenda
 
@@ -200,6 +215,7 @@ Builds sections for blockers, overdue, in-progress, due this week, and new/unass
    ---
    type: project
    status: active
+   owners: [Ana]          # project owner(s); [Ana, Bob] for co-ownership, [] for unassigned
    summary: Brief one-line summary of the project
    created: 2026-02-19
    links: []
@@ -222,6 +238,8 @@ Builds sections for blockers, overdue, in-progress, due this week, and new/unass
    ```
    | Project Alpha | active | `data/projects/project-alpha/` |
    ```
+
+The `owners` array holds team-member `first_name` values. Two or more names means co-ownership. A project's owner is independent of who owns its tasks. Reassign later with `/update` (e.g., "set the owner of project alpha to Ana") or by editing the front matter. See the `owner-report` command to list everything a person owns.
 
 ### Adding links to a project
 
@@ -272,6 +290,7 @@ Set status to `completed`. The project folder stays in place. Dashboard scripts 
    type: stream
    project: project-alpha
    status: active
+   owners: [Ana]          # stream owner(s); [Ana, Bob] for co-ownership, [] for unassigned
    summary: API migration and new endpoint development
    created: 2026-02-19
    links: []
@@ -281,10 +300,9 @@ Set status to `completed`. The project folder stays in place. Dashboard scripts 
 
    ### Overview
    What this stream covers.
-
-   ### Owner
-   Ana
    ```
+
+The stream's `owners` array works exactly like a project's — team-member `first_name` values, multiple names for co-ownership, independent of task ownership. Reassign with `/update` (e.g., "make Ana and Bob co-owners of the backend stream in project alpha") or by editing the front matter.
 
 ### Stream abbreviations for task IDs
 

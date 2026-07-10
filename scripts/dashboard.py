@@ -6,6 +6,7 @@ Usage:
     python scripts/dashboard.py this_week
     python scripts/dashboard.py my_team
     python scripts/dashboard.py weekly_report
+    python scripts/dashboard.py owner <first_name>
 """
 
 import sys
@@ -30,6 +31,7 @@ REPORT_SUBDIRS = {
     "this_week": "weekly",
     "my_team": "team",
     "weekly_report": "weekly-report",
+    "owner": "owner",
 }
 
 
@@ -336,6 +338,26 @@ def task_owners(task: dict) -> list[str]:
     return ["Unassigned"]
 
 
+def entity_owners(entity: dict) -> list[str]:
+    """Return the list of owner first_names for a project or stream.
+
+    Supports the 'owners' array field and a legacy 'owner' string field.
+    Returns ['Unassigned'] when no owner is set.
+    """
+    owners = entity.get("owners")
+    if isinstance(owners, list) and owners:
+        return owners
+    legacy = entity.get("owner")
+    if legacy and isinstance(legacy, str):
+        return [legacy]
+    return ["Unassigned"]
+
+
+def fmt_entity_owners(entity: dict) -> str:
+    """Format project/stream owners for display (co-owners joined with ' / ')."""
+    return " / ".join(entity_owners(entity))
+
+
 def fmt_owners(task: dict) -> str:
     """Format the owners for display in dashboard tables.
 
@@ -501,9 +523,17 @@ def cmd_today():
             print(f"### {project_display_name(proj)}")
             if proj:
                 pf = DATA_DIR / "projects" / proj / "project.md"
+                pfm = parse_front_matter(pf) if pf.exists() else {}
+                proj_owner = fmt_entity_owners(pfm) if pfm else "Unassigned"
                 proj_latest = extract_latest_update(pf) if pf.exists() else None
+                meta = []
+                if proj_owner != "Unassigned":
+                    meta.append(f"> Owner: {proj_owner}")
                 if proj_latest:
-                    print(f"> Latest: {proj_latest}")
+                    meta.append(f"> Latest: {proj_latest}")
+                if meta:
+                    for m in meta:
+                        print(m)
                     print()
             for stream in sorted(grouped[proj]):
                 if stream != "(Project-level)" and proj:
@@ -512,6 +542,9 @@ def cmd_today():
                     sstatus = sfm.get("status") or "active"
                     latest = extract_latest_update(sf) if sf.exists() else None
                     print(f"#### {stream_display_name(proj, stream)} ({sstatus})")
+                    s_owner = fmt_entity_owners(sfm)
+                    if s_owner != "Unassigned":
+                        print(f"> Owner: {s_owner}")
                     if latest:
                         print(f"> Latest: {latest}")
                         print()
@@ -570,6 +603,9 @@ def cmd_this_week():
         slug = proj["_slug"]
         pstatus = proj.get("status") or "active"
         print(f"## Project: {proj['_title']} ({pstatus})")
+        powner = fmt_entity_owners(proj)
+        if powner != "Unassigned":
+            print(f"> Owner: {powner}")
         latest = proj.get("_latest_update")
         if latest:
             print(f"> Latest: {latest}")
@@ -586,6 +622,9 @@ def cmd_this_week():
             stream_tasks.sort(key=priority_sort_key)
 
             print(f"### Stream: {stream['_title']} ({sstatus})")
+            sowner = fmt_entity_owners(stream)
+            if sowner != "Unassigned":
+                print(f"> Owner: {sowner}")
             latest = stream.get("_latest_update")
             if latest:
                 print(f"> Latest: {latest}")
@@ -698,12 +737,12 @@ def cmd_my_team():
     if active_projects:
         print("## Project Status")
         print()
-        print("| Project | Status | Latest Update |")
-        print("|---------|--------|---------------|")
+        print("| Project | Owner | Status | Latest Update |")
+        print("|---------|-------|--------|---------------|")
         for p in active_projects:
             pstatus = p.get("status") or "active"
             latest = p.get("_latest_update") or "—"
-            print(f"| {p['_title']} | {pstatus} | {latest} |")
+            print(f"| {p['_title']} | {fmt_entity_owners(p)} | {pstatus} | {latest} |")
         print()
 
     # Stream status
@@ -712,13 +751,13 @@ def cmd_my_team():
     if active_streams:
         print("## Stream Status")
         print()
-        print("| Project | Stream | Status | Latest Update |")
-        print("|---------|--------|--------|---------------|")
+        print("| Project | Stream | Owner | Status | Latest Update |")
+        print("|---------|--------|-------|--------|---------------|")
         for s in active_streams:
             proj_name = project_display_name(s["_project_slug"])
             sstatus = s.get("status") or "active"
             latest = s.get("_latest_update") or "—"
-            print(f"| {proj_name} | {s['_title']} | {sstatus} | {latest} |")
+            print(f"| {proj_name} | {s['_title']} | {fmt_entity_owners(s)} | {sstatus} | {latest} |")
         print()
 
     # Summary table
@@ -851,12 +890,12 @@ def cmd_weekly_report():
     if active_projects:
         print("## 📁 Project Status")
         print()
-        print("| Project | Status | Latest Update |")
-        print("|---------|--------|---------------|")
+        print("| Project | Owner | Status | Latest Update |")
+        print("|---------|-------|--------|---------------|")
         for p in active_projects:
             pstatus = p.get("status") or "active"
             latest = p.get("_latest_update") or "—"
-            print(f"| {p['_title']} | {pstatus} | {latest} |")
+            print(f"| {p['_title']} | {fmt_entity_owners(p)} | {pstatus} | {latest} |")
         print()
 
     # Stream status
@@ -865,13 +904,13 @@ def cmd_weekly_report():
     if active_streams:
         print("## 🌊 Stream Status")
         print()
-        print("| Project | Stream | Status | Latest Update |")
-        print("|---------|--------|--------|---------------|")
+        print("| Project | Stream | Owner | Status | Latest Update |")
+        print("|---------|--------|-------|--------|---------------|")
         for s in active_streams:
             proj_name = project_display_name(s["_project_slug"])
             sstatus = s.get("status") or "active"
             latest = s.get("_latest_update") or "—"
-            print(f"| {proj_name} | {s['_title']} | {sstatus} | {latest} |")
+            print(f"| {proj_name} | {s['_title']} | {fmt_entity_owners(s)} | {sstatus} | {latest} |")
         print()
 
     # Summary
@@ -882,6 +921,71 @@ def cmd_weekly_report():
     print(f"- Tasks blocked: {len(blocked)}")
     print(f"- New tasks created: {len(new_this_week)}")
     print(f"- Total open tasks: {total_open}")
+    print()
+
+
+# ---------------------------------------------------------------------------
+# Dashboard: owner (projects & streams owned by a specific person)
+# ---------------------------------------------------------------------------
+
+def cmd_owner(owner: str):
+    today = date.today()
+    projects = load_projects()
+    all_streams = load_all_streams()
+    tasks = load_all_tasks()
+
+    def owns(entity: dict) -> bool:
+        names = [o.lower() for o in entity_owners(entity)]
+        return owner.lower() in names
+
+    def counts(items: list[dict]) -> tuple[int, int]:
+        open_n = sum(1 for t in items if (t.get("status") or "").lower() != "done")
+        blocked_n = sum(1 for t in items if (t.get("status") or "").lower() == "blocked")
+        return open_n, blocked_n
+
+    owned_projects = [p for p in projects if owns(p)]
+    owned_streams = [s for s in all_streams if owns(s)]
+
+    print(f"# 👤 Owner Report: {owner} — {today}")
+    print()
+    print(f"**Projects owned**: {len(owned_projects)} | **Streams owned**: {len(owned_streams)}")
+    print()
+
+    if not owned_projects and not owned_streams:
+        print(f"{owner} does not own any projects or streams.")
+        return
+
+    print("## 📁 Projects Owned")
+    print()
+    if owned_projects:
+        print("| Project | Status | Open | Blocked | Latest Update |")
+        print("|---------|--------|------|---------|---------------|")
+        for p in owned_projects:
+            # Roll up all tasks under the project (project-level + all streams)
+            ptasks = [t for t in tasks if t.get("project") == p["_slug"]]
+            open_n, blocked_n = counts(ptasks)
+            pstatus = p.get("status") or "active"
+            latest = p.get("_latest_update") or "—"
+            print(f"| {p['_title']} | {pstatus} | {open_n} | {blocked_n} | {latest} |")
+    else:
+        print("None")
+    print()
+
+    print("## 🌊 Streams Owned")
+    print()
+    if owned_streams:
+        print("| Project | Stream | Status | Open | Blocked | Latest Update |")
+        print("|---------|--------|--------|------|---------|---------------|")
+        for s in owned_streams:
+            stasks = [t for t in tasks
+                      if t.get("project") == s["_project_slug"] and t.get("stream") == s["_slug"]]
+            open_n, blocked_n = counts(stasks)
+            proj_name = project_display_name(s["_project_slug"])
+            sstatus = s.get("status") or "active"
+            latest = s.get("_latest_update") or "—"
+            print(f"| {proj_name} | {s['_title']} | {sstatus} | {open_n} | {blocked_n} | {latest} |")
+    else:
+        print("None")
     print()
 
 
@@ -897,7 +1001,7 @@ COMMANDS = {
 }
 
 
-def run_and_save(command_name: str):
+def run_and_save(command_name: str, owner: str | None = None):
     """Run a dashboard command, capture its output, save to reports/, print to stdout."""
     today = date.today()
     monday = today - timedelta(days=today.weekday())
@@ -913,14 +1017,21 @@ def run_and_save(command_name: str):
     month = f"{file_date.month:02d}"
     report_dir = REPORTS_DIR / subdir / year / month
     report_dir.mkdir(parents=True, exist_ok=True)
-    report_path = report_dir / f"{file_date}-{subdir}.md"
+    if command_name == "owner":
+        owner_slug = re.sub(r"[^a-z0-9]+", "-", (owner or "").lower()).strip("-") or "owner"
+        report_path = report_dir / f"{file_date}-{owner_slug}-owner.md"
+    else:
+        report_path = report_dir / f"{file_date}-{subdir}.md"
 
     # Capture stdout into a buffer
     real_stdout = sys.stdout
     buf = io.StringIO()
     sys.stdout = buf
 
-    COMMANDS[command_name]()
+    if command_name == "owner":
+        cmd_owner(owner)
+    else:
+        COMMANDS[command_name]()
 
     sys.stdout = real_stdout
     output = buf.getvalue()
@@ -936,8 +1047,9 @@ def run_and_save(command_name: str):
 
 
 def main():
-    if len(sys.argv) < 2 or sys.argv[1] not in COMMANDS:
-        print(f"Usage: python {sys.argv[0]} <{'|'.join(COMMANDS)}>")
+    valid = list(COMMANDS) + ["owner"]
+    if len(sys.argv) < 2 or sys.argv[1] not in valid:
+        print(f"Usage: python {sys.argv[0]} <{'|'.join(COMMANDS)}|owner <first_name>>")
         sys.exit(1)
 
     if not DATA_DIR.exists():
@@ -960,7 +1072,13 @@ def main():
         print("Or use a slash command like /new-task to create it automatically.", file=sys.stderr)
         sys.exit(1)
 
-    run_and_save(sys.argv[1])
+    if sys.argv[1] == "owner":
+        if len(sys.argv) < 3 or not " ".join(sys.argv[2:]).strip():
+            print("Usage: python scripts/dashboard.py owner <first_name>", file=sys.stderr)
+            sys.exit(1)
+        run_and_save("owner", " ".join(sys.argv[2:]).strip())
+    else:
+        run_and_save(sys.argv[1])
 
 
 if __name__ == "__main__":

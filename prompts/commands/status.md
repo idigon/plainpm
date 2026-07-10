@@ -21,6 +21,7 @@ Optional: a project name or slug. If not provided, show summary for all projects
 ```
 # 📈 Status Report: [Project Name]
 **Status**: active | on-hold | completed
+**Owner**: [owners joined with " / ", or "Unassigned"]
 **Last updated**: [today]
 
 ## Overview
@@ -37,6 +38,7 @@ Optional: a project name or slug. If not provided, show summary for all projects
 ## Streams
 
 ### [Stream Name] (status)
+**Owner**: [stream owners joined with " / ", or "Unassigned"]
 **Tasks**: X open / Y total
 
 | ID | Task | Owner | Priority | Status | Due |
@@ -60,10 +62,10 @@ Optional: a project name or slug. If not provided, show summary for all projects
 ```
 # 📈 Portfolio Status
 
-| Project | Status | Open Tasks | Blocked | Overdue |
-|---------|--------|------------|---------|---------|
-| Project Alpha | active | 5 | 1 | 0 |
-| Project Beta | active | 3 | 0 | 2 |
+| Project | Owner | Status | Open Tasks | Blocked | Overdue |
+|---------|-------|--------|------------|---------|---------|
+| Project Alpha | Alice | active | 5 | 1 | 0 |
+| Project Beta | Alice / Bob | active | 3 | 0 | 2 |
 ```
 
 Then for each project, show a brief breakdown:

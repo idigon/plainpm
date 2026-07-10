@@ -66,9 +66,11 @@ Then inform the user:
    - Stream abbreviation: derive from stream folder name (e.g., `backend-api` → `BE`, `design` → `DES`, `frontend` → `FE`). Use first letters of each word, uppercase, 2-4 chars.
 
 5. Create necessary directories if they don't exist (project folder, tasks/YYYY folder, stream folder).
+   - If a **new stream** is being created (`stream.md` from template), set its `owners` array. If the user named an owner for the stream, use it; otherwise ask who owns the stream (accepting "unassigned" / leaving `owners: []`). Owner names must match a team member's `first_name`. Note: the task's owner and the stream's owner are independent — don't assume they're the same.
 
 6. If a new project is being created:
    - Create `data/projects/<slug>/project.md` from template
+   - Set the project's `owners` array: if the user named a project owner, use it; otherwise ask who owns the project (accepting "unassigned"). Owner names must match a team member's `first_name`, and are independent of the task's owner.
    - Add entry to `data/projects/_index.md`
 
 7. Create the task file with proper YAML front matter:
