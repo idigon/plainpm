@@ -2,6 +2,7 @@
 type: stream
 project:
 status: active
+owners: []
 summary:
 created:
 links: []
@@ -10,5 +11,3 @@ links: []
 ## [Stream Name]
 
 ### Overview
-
-### Owner
