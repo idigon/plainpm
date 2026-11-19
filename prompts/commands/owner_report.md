@@ -20,7 +20,7 @@ Optional: an owner's name (a team member's `first_name`), or a self-reference ("
    python scripts/dashboard.py owner "<FirstName>"
    ```
 
-4. Display the full output as-is — it is already formatted as markdown. Do not summarize or modify it. The report lists the projects and streams the person owns (co-owned entities are included), each with its status, open/blocked task counts, and latest update.
+4. Display the full output as-is — it is already formatted as markdown. Do not summarize or modify it. The report lists the projects and streams the person owns (co-owned entities are included), each with its status, health, target date (⚠️ when past due), progress, open/blocked task counts, and latest update.
 
 5. The script automatically saves a snapshot to `data/reports/owner/YYYY/MM/YYYY-MM-DD-<owner-slug>-owner.md`. Mention the saved file path to the user.
 

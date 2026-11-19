@@ -7,6 +7,8 @@ Usage:
     python scripts/dashboard.py my_team
     python scripts/dashboard.py weekly_report
     python scripts/dashboard.py owner <first_name>
+    python scripts/dashboard.py timeline [project-slug]
+    python scripts/dashboard.py check
 """
 
 import sys
@@ -32,6 +34,7 @@ REPORT_SUBDIRS = {
     "my_team": "team",
     "weekly_report": "weekly-report",
     "owner": "owner",
+    "timeline": "timeline",
 }
 
 
@@ -313,13 +316,68 @@ def load_all_streams() -> list[dict]:
     return streams
 
 
+def load_archived_tasks() -> list[dict]:
+    """Load archived tasks from data/archive/. Used for progress roll-ups only,
+    so archiving finished work doesn't change a project's or stream's progress."""
+    tasks = []
+    archive_dir = DATA_DIR / "archive"
+    if not archive_dir.exists():
+        return tasks
+    for tf in sorted(archive_dir.rglob("*.md")):
+        fm = parse_front_matter(tf)
+        if fm.get("type") != "task":
+            continue
+        fm["_file"] = tf
+        fm["_title"] = extract_title(tf)
+        fm["_archived"] = True
+        tasks.append(fm)
+    return tasks
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
+TASK_STATUSES = ("todo", "in-progress", "blocked", "done", "cancelled")
+CLOSED_STATUSES = {"done", "cancelled"}
+ENTITY_STATUSES = ("active", "on-hold", "completed")
+PRIORITIES = ("critical", "high", "medium", "low")
+HEALTH_VALUES = ("on-track", "at-risk", "off-track")
+COMPLETION_MODES = ("any", "all")
+
 PRIORITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
 PRIORITY_ICONS = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}
-STATUS_ICONS = {"todo": "⬚", "in-progress": "🔄", "blocked": "🚫", "done": "✅"}
+STATUS_ICONS = {"todo": "⬚", "in-progress": "🔄", "blocked": "🚫", "done": "✅", "cancelled": "✖️"}
+HEALTH_ICONS = {"on-track": "🟢", "at-risk": "🟡", "off-track": "🔴"}
+
+
+def task_status(task: dict) -> str:
+    s = task.get("status")
+    return s.lower() if isinstance(s, str) else ""
+
+
+def is_open(task: dict) -> bool:
+    """A task is open until it is done or cancelled."""
+    return task_status(task) not in CLOSED_STATUSES
+
+
+def closed_date(task: dict) -> date | None:
+    """The date a closed task was completed or cancelled (None for open tasks)."""
+    status = task_status(task)
+    if status == "done":
+        return parse_date(task.get("completed_date"))
+    if status == "cancelled":
+        return parse_date(task.get("cancelled_date"))
+    return None
+
+
+def print_table_header(headers: list[str]):
+    print("| " + " | ".join(headers) + " |")
+    print("|" + "|".join("-" * (len(h) + 2) for h in headers) + "|")
+
+
+def print_row(cells: list):
+    print("| " + " | ".join(str(c) for c in cells) + " |")
 
 
 def task_owners(task: dict) -> list[str]:
@@ -402,10 +460,13 @@ def fmt_due(task: dict) -> str:
     if not d:
         return "No due date"
     due = parse_date(d)
-    status = (task.get("status") or "").lower()
-    if due and due < date.today() and status != "done":
+    if due and due < date.today() and is_open(task):
         return f"⚠️ {d}"
     return d
+
+
+def fmt_start(task: dict) -> str:
+    return task.get("start_date") or "—"
 
 
 MAX_UPDATE_LEN = 60
@@ -416,6 +477,90 @@ def fmt_latest_update(task: dict) -> str:
     if len(update) > MAX_UPDATE_LEN:
         update = update[:MAX_UPDATE_LEN - 3] + "..."
     return update or "—"
+
+
+# --- Project / stream schedule, health, and progress ---
+
+def entity_status(entity: dict) -> str:
+    s = entity.get("status") or "active"
+    return s.lower() if isinstance(s, str) else "active"
+
+
+def entity_is_late(entity: dict) -> bool:
+    """True when a project/stream is past its target_date and not completed."""
+    target = parse_date(entity.get("target_date"))
+    return bool(target and target < date.today() and entity_status(entity) != "completed")
+
+
+def fmt_health(entity: dict) -> str:
+    h = str(entity.get("health") or "").lower()
+    if not h:
+        return "—"
+    return f"{HEALTH_ICONS.get(h, '⬚')} {h}"
+
+
+def fmt_target(entity: dict) -> str:
+    t = entity.get("target_date")
+    if not t:
+        return "—"
+    return f"⚠️ {t}" if entity_is_late(entity) else t
+
+
+def tasks_in(tasks: list[dict], project_slug: str, stream_slug: str | None = None) -> list[dict]:
+    """Tasks of a project (all streams + project-level), or of one of its streams."""
+    return [t for t in tasks if t.get("project") == project_slug
+            and (stream_slug is None or t.get("stream") == stream_slug)]
+
+
+def fmt_progress(tasks: list[dict]) -> str:
+    """Share of non-cancelled tasks that are done, e.g. '60% (6/10)'."""
+    counted = [t for t in tasks if task_status(t) != "cancelled"]
+    if not counted:
+        return "—"
+    done = sum(1 for t in counted if task_status(t) == "done")
+    return f"{100 * done // len(counted)}% ({done}/{len(counted)})"
+
+
+def fmt_entity_meta(entity: dict, tasks: list[dict]) -> str:
+    """One-line health / dates / progress summary for a project or stream header."""
+    parts = []
+    if entity.get("health"):
+        parts.append(f"Health: {fmt_health(entity)}")
+    start, target = entity.get("start_date"), entity.get("target_date")
+    if start or target:
+        parts.append(f"Dates: {start or '?'} → {fmt_target(entity) if target else '?'}")
+    parts.append(f"Progress: {fmt_progress(tasks)}")
+    return " | ".join(parts)
+
+
+def print_project_status_table(heading: str, projects: list[dict], history: list[dict]):
+    """Project Status table (non-completed projects) with health, target, and progress."""
+    active = [p for p in projects if entity_status(p) != "completed"]
+    if not active:
+        return
+    print(f"## {heading}")
+    print()
+    print_table_header(["Project", "Owner", "Status", "Health", "Target", "Progress", "Latest Update"])
+    for p in active:
+        print_row([p["_title"], fmt_entity_owners(p), entity_status(p), fmt_health(p), fmt_target(p),
+                   fmt_progress(tasks_in(history, p["_slug"])), p.get("_latest_update") or "—"])
+    print()
+
+
+def print_stream_status_table(heading: str, streams: list[dict], history: list[dict]):
+    """Stream Status table (non-completed streams) with health, target, and progress."""
+    active = [s for s in streams if entity_status(s) != "completed"]
+    if not active:
+        return
+    print(f"## {heading}")
+    print()
+    print_table_header(["Project", "Stream", "Owner", "Status", "Health", "Target", "Progress", "Latest Update"])
+    for s in active:
+        stream_tasks = tasks_in(history, s["_project_slug"], s["_slug"])
+        print_row([project_display_name(s["_project_slug"]), s["_title"], fmt_entity_owners(s),
+                   entity_status(s), fmt_health(s), fmt_target(s), fmt_progress(stream_tasks),
+                   s.get("_latest_update") or "—"])
+    print()
 
 
 def parse_date(s) -> date | None:
@@ -480,15 +625,21 @@ def cmd_today():
     blocked = []
     not_started = []
     completed = []
+    cancelled = []
+    scheduled_later = 0  # todo tasks whose start_date is still in the future
 
     for t in tasks:
-        status = (t.get("status") or "").lower()
+        status = task_status(t)
         due = parse_date(t.get("due_date"))
+        start = parse_date(t.get("start_date"))
 
         if status == "done":
-            completed_date = parse_date(t.get("completed_date"))
-            if completed_date and completed_date == today:
+            if closed_date(t) == today:
                 completed.append(t)
+            continue
+        if status == "cancelled":
+            if closed_date(t) == today:
+                cancelled.append(t)
             continue
         if due and due < today:
             overdue.append(t)
@@ -499,7 +650,10 @@ def cmd_today():
         if status == "blocked":
             blocked.append(t)
         if status == "todo" and not (due and due < today):
-            not_started.append(t)
+            if start and start > today:
+                scheduled_later += 1
+            else:
+                not_started.append(t)
 
     print(f"# 📋 Daily Dashboard — {today}")
     print()
@@ -551,24 +705,26 @@ def cmd_today():
                 else:
                     print(f"#### {stream}")
                 print()
-                has_deps = any(t.get("blocked_by") for t in grouped[proj][stream])
+                rows = grouped[proj][stream]
+                has_start = any(t.get("start_date") for t in rows)
+                has_deps = any(t.get("blocked_by") for t in rows)
+                headers = ["ID", "Task", "Owner", "Priority"]
+                if has_start:
+                    headers.append("Start")
+                headers.append("Due")
                 if has_deps:
-                    print("| ID | Task | Owner | Priority | Due | Blocked By | Latest Update |")
-                    print("|----|------|-------|----------|-----|------------|---------------|")
-                else:
-                    print("| ID | Task | Owner | Priority | Due | Latest Update |")
-                    print("|----|------|-------|----------|-----|---------------|")
-                for t in grouped[proj][stream]:
-                    tid = t.get("id") or "???"
-                    title = t["_title"]
-                    owner = fmt_owners(t)
-                    update = fmt_latest_update(t)
-                    blocked_by = t.get("blocked_by") or []
+                    headers.append("Blocked By")
+                headers.append("Latest Update")
+                print_table_header(headers)
+                for t in rows:
+                    cells = [t.get("id") or "???", t["_title"], fmt_owners(t), fmt_priority(t)]
+                    if has_start:
+                        cells.append(fmt_start(t))
+                    cells.append(fmt_due(t))
                     if has_deps:
-                        dep_str = ", ".join(blocked_by) if blocked_by else "—"
-                        print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_due(t)} | {dep_str} | {update} |")
-                    else:
-                        print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_due(t)} | {update} |")
+                        cells.append(", ".join(t.get("blocked_by") or []) or "—")
+                    cells.append(fmt_latest_update(t))
+                    print_row(cells)
                 print()
 
     print_section("🔴 Overdue", overdue)
@@ -576,7 +732,13 @@ def cmd_today():
     print_section("🔄 In Progress", in_progress)
     print_section("🚫 Blocked", blocked)
     print_section("📋 Not Started", not_started)
+    if scheduled_later:
+        print(f"_{scheduled_later} todo task(s) with a future `start_date` are not shown — "
+              f"see `this_week` or `timeline`._")
+        print()
     print_section("✅ Completed", completed)
+    if cancelled:
+        print_section("✖️ Cancelled", cancelled)
 
 
 # ---------------------------------------------------------------------------
@@ -586,11 +748,29 @@ def cmd_today():
 def cmd_this_week():
     today = date.today()
     monday, sunday = week_bounds(today)
-    tasks = load_all_tasks()
-    # Exclude done tasks unless completed this week
-    tasks = [t for t in tasks if (t.get("status") or "").lower() != "done"
-             or (parse_date(t.get("completed_date")) and monday <= parse_date(t.get("completed_date")) <= sunday)]
+    all_tasks = load_all_tasks()
+    history = all_tasks + load_archived_tasks()  # for progress roll-ups
+
+    def in_week(d: date | None) -> bool:
+        return d is not None and monday <= d <= sunday
+
+    # Open tasks, plus tasks done or cancelled this week
+    tasks = [t for t in all_tasks if is_open(t) or in_week(closed_date(t))]
     projects = load_projects()
+
+    def print_week_table(rows: list[dict]):
+        has_start = any(t.get("start_date") for t in rows)
+        headers = ["ID", "Task", "Owner", "Priority", "Status"]
+        if has_start:
+            headers.append("Start")
+        headers += ["Due", "Latest Update"]
+        print_table_header(headers)
+        for t in rows:
+            cells = [t.get("id") or "???", t["_title"], fmt_owners(t), fmt_priority(t), fmt_status(t)]
+            if has_start:
+                cells.append(fmt_start(t))
+            cells += [fmt_due(t), fmt_latest_update(t)]
+            print_row(cells)
 
     print(f"# 📊 Weekly Dashboard — Week of {monday}")
     print()
@@ -606,6 +786,7 @@ def cmd_this_week():
         powner = fmt_entity_owners(proj)
         if powner != "Unassigned":
             print(f"> Owner: {powner}")
+        print(f"> {fmt_entity_meta(proj, tasks_in(history, slug))}")
         latest = proj.get("_latest_update")
         if latest:
             print(f"> Latest: {latest}")
@@ -625,18 +806,13 @@ def cmd_this_week():
             sowner = fmt_entity_owners(stream)
             if sowner != "Unassigned":
                 print(f"> Owner: {sowner}")
+            print(f"> {fmt_entity_meta(stream, tasks_in(history, slug, sslug))}")
             latest = stream.get("_latest_update")
             if latest:
                 print(f"> Latest: {latest}")
             print()
             if stream_tasks:
-                print("| ID | Task | Owner | Priority | Status | Due | Latest Update |")
-                print("|----|------|-------|----------|--------|-----|---------------|")
-                for t in stream_tasks:
-                    tid = t.get("id") or "???"
-                    title = t["_title"]
-                    owner = fmt_owners(t)
-                    print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} | {fmt_latest_update(t)} |")
+                print_week_table(stream_tasks)
             else:
                 print("No open tasks.")
             print()
@@ -647,13 +823,7 @@ def cmd_this_week():
         if plevel:
             print("### (Project-level tasks)")
             print()
-            print("| ID | Task | Owner | Priority | Status | Due | Latest Update |")
-            print("|----|------|-------|----------|--------|-----|---------------|")
-            for t in plevel:
-                tid = t.get("id") or "???"
-                title = t["_title"]
-                owner = fmt_owners(t)
-                print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} | {fmt_latest_update(t)} |")
+            print_week_table(plevel)
             print()
 
         print("---")
@@ -665,13 +835,7 @@ def cmd_this_week():
         standalone.sort(key=priority_sort_key)
         print("## Standalone Tasks")
         print()
-        print("| ID | Task | Owner | Priority | Status | Due | Latest Update |")
-        print("|----|------|-------|----------|--------|-----|---------------|")
-        for t in standalone:
-            tid = t.get("id") or "???"
-            title = t["_title"]
-            owner = fmt_owners(t)
-            print(f"| {tid} | {title} | {owner} | {fmt_priority(t)} | {fmt_status(t)} | {fmt_due(t)} | {fmt_latest_update(t)} |")
+        print_week_table(standalone)
         print()
         print("---")
         print()
@@ -683,10 +847,11 @@ def cmd_this_week():
 
 def cmd_my_team():
     today = date.today()
-    tasks = load_all_tasks()
-    # Exclude done tasks unless completed today
-    tasks = [t for t in tasks if (t.get("status") or "").lower() != "done"
-             or (parse_date(t.get("completed_date")) and parse_date(t.get("completed_date")) == today)]
+    all_tasks = load_all_tasks()
+    history = all_tasks + load_archived_tasks()  # for progress roll-ups
+    # Open tasks, plus tasks completed today (cancelled tasks are left out)
+    tasks = [t for t in all_tasks if is_open(t)
+             or (task_status(t) == "done" and closed_date(t) == today)]
     team = load_team()
 
     # Group by owner — multi-owner tasks appear under each assigned member
@@ -708,8 +873,8 @@ def cmd_my_team():
         owner_tasks.sort(key=priority_sort_key)
 
         role_str = f" — {role}" if role else ""
-        open_count = sum(1 for t in owner_tasks if (t.get("status") or "").lower() != "done")
-        done_count = sum(1 for t in owner_tasks if (t.get("status") or "").lower() == "done")
+        open_count = sum(1 for t in owner_tasks if is_open(t))
+        done_count = sum(1 for t in owner_tasks if task_status(t) == "done")
         print(f"## {owner}{role_str}")
         print(f"**Open tasks**: {open_count} | **Completed today**: {done_count}")
         print()
@@ -731,34 +896,8 @@ def cmd_my_team():
         print("---")
         print()
 
-    # Project status
-    projects = load_projects()
-    active_projects = [p for p in projects if (p.get("status") or "active") != "completed"]
-    if active_projects:
-        print("## Project Status")
-        print()
-        print("| Project | Owner | Status | Latest Update |")
-        print("|---------|-------|--------|---------------|")
-        for p in active_projects:
-            pstatus = p.get("status") or "active"
-            latest = p.get("_latest_update") or "—"
-            print(f"| {p['_title']} | {fmt_entity_owners(p)} | {pstatus} | {latest} |")
-        print()
-
-    # Stream status
-    all_streams = load_all_streams()
-    active_streams = [s for s in all_streams if (s.get("status") or "active") != "completed"]
-    if active_streams:
-        print("## Stream Status")
-        print()
-        print("| Project | Stream | Owner | Status | Latest Update |")
-        print("|---------|--------|-------|--------|---------------|")
-        for s in active_streams:
-            proj_name = project_display_name(s["_project_slug"])
-            sstatus = s.get("status") or "active"
-            latest = s.get("_latest_update") or "—"
-            print(f"| {proj_name} | {s['_title']} | {fmt_entity_owners(s)} | {sstatus} | {latest} |")
-        print()
+    print_project_status_table("Project Status", load_projects(), history)
+    print_stream_status_table("Stream Status", load_all_streams(), history)
 
     # Summary table
     print("## Summary")
@@ -767,12 +906,14 @@ def cmd_my_team():
     print("|--------|------|-------------|---------|-----------------|---------------------|")
     for owner in owners:
         owner_tasks = by_owner[owner]
-        open_count = sum(1 for t in owner_tasks if (t.get("status") or "").lower() != "done")
-        done_count = sum(1 for t in owner_tasks if (t.get("status") or "").lower() == "done")
-        ip = sum(1 for t in owner_tasks if (t.get("status") or "").lower() == "in-progress")
-        bl = sum(1 for t in owner_tasks if (t.get("status") or "").lower() == "blocked")
+        open_count = sum(1 for t in owner_tasks if is_open(t))
+        done_count = sum(1 for t in owner_tasks if task_status(t) == "done")
+        ip = sum(1 for t in owner_tasks if task_status(t) == "in-progress")
+        bl = sum(1 for t in owner_tasks if task_status(t) == "blocked")
         ages = []
         for t in owner_tasks:
+            if not is_open(t):
+                continue
             created = parse_date(t.get("created"))
             if created:
                 ages.append(working_days_between(created, today))
@@ -789,27 +930,31 @@ def cmd_weekly_report():
     today = date.today()
     monday, sunday = week_bounds(today)
     tasks = load_all_tasks()
+    history = tasks + load_archived_tasks()  # for progress roll-ups
 
     completed = []
+    cancelled = []
     in_progress = []
     blocked = []
     new_this_week = []
 
     for t in tasks:
-        status = (t.get("status") or "").lower()
-        completed_date = parse_date(t.get("completed_date"))
+        status = task_status(t)
+        closed = closed_date(t)
         created_date = parse_date(t.get("created"))
 
-        if status == "done" and completed_date and monday <= completed_date <= sunday:
+        if status == "done" and closed and monday <= closed <= sunday:
             completed.append(t)
+        if status == "cancelled" and closed and monday <= closed <= sunday:
+            cancelled.append(t)
         if status == "in-progress":
             in_progress.append(t)
         if status == "blocked":
             blocked.append(t)
-        if created_date and monday <= created_date <= sunday and status != "done":
+        if created_date and monday <= created_date <= sunday and is_open(t):
             new_this_week.append(t)
 
-    total_open = sum(1 for t in tasks if (t.get("status") or "").lower() not in ("done",))
+    total_open = sum(1 for t in tasks if is_open(t))
 
     print(f"# 📝 Weekly Report — Week of {monday}")
     print()
@@ -828,6 +973,19 @@ def cmd_weekly_report():
             owner = fmt_owners(t)
             cd = t.get("completed_date") or "?"
             print(f"| {tid} | {title} | {proj} | {owner} | {cd} | {fmt_latest_update(t)} |")
+    else:
+        print("None")
+    print()
+
+    # Cancelled
+    print("## ✖️ Cancelled This Week")
+    print()
+    if cancelled:
+        cancelled.sort(key=lambda t: t.get("cancelled_date") or "")
+        print_table_header(["ID", "Task", "Project", "Owner", "Cancelled", "Latest Update"])
+        for t in cancelled:
+            print_row([t.get("id") or "???", t["_title"], project_display_name(t.get("project") or ""),
+                       fmt_owners(t), t.get("cancelled_date") or "?", fmt_latest_update(t)])
     else:
         print("None")
     print()
@@ -884,39 +1042,14 @@ def cmd_weekly_report():
         print("None")
     print()
 
-    # Project status
-    projects = load_projects()
-    active_projects = [p for p in projects if (p.get("status") or "active") != "completed"]
-    if active_projects:
-        print("## 📁 Project Status")
-        print()
-        print("| Project | Owner | Status | Latest Update |")
-        print("|---------|-------|--------|---------------|")
-        for p in active_projects:
-            pstatus = p.get("status") or "active"
-            latest = p.get("_latest_update") or "—"
-            print(f"| {p['_title']} | {fmt_entity_owners(p)} | {pstatus} | {latest} |")
-        print()
-
-    # Stream status
-    all_streams = load_all_streams()
-    active_streams = [s for s in all_streams if (s.get("status") or "active") != "completed"]
-    if active_streams:
-        print("## 🌊 Stream Status")
-        print()
-        print("| Project | Stream | Owner | Status | Latest Update |")
-        print("|---------|--------|-------|--------|---------------|")
-        for s in active_streams:
-            proj_name = project_display_name(s["_project_slug"])
-            sstatus = s.get("status") or "active"
-            latest = s.get("_latest_update") or "—"
-            print(f"| {proj_name} | {s['_title']} | {fmt_entity_owners(s)} | {sstatus} | {latest} |")
-        print()
+    print_project_status_table("📁 Project Status", load_projects(), history)
+    print_stream_status_table("🌊 Stream Status", load_all_streams(), history)
 
     # Summary
     print("## 📊 Summary")
     print()
     print(f"- Tasks completed: {len(completed)}")
+    print(f"- Tasks cancelled: {len(cancelled)}")
     print(f"- Tasks in progress: {len(in_progress)}")
     print(f"- Tasks blocked: {len(blocked)}")
     print(f"- New tasks created: {len(new_this_week)}")
@@ -933,14 +1066,15 @@ def cmd_owner(owner: str):
     projects = load_projects()
     all_streams = load_all_streams()
     tasks = load_all_tasks()
+    history = tasks + load_archived_tasks()  # for progress roll-ups
 
     def owns(entity: dict) -> bool:
         names = [o.lower() for o in entity_owners(entity)]
         return owner.lower() in names
 
     def counts(items: list[dict]) -> tuple[int, int]:
-        open_n = sum(1 for t in items if (t.get("status") or "").lower() != "done")
-        blocked_n = sum(1 for t in items if (t.get("status") or "").lower() == "blocked")
+        open_n = sum(1 for t in items if is_open(t))
+        blocked_n = sum(1 for t in items if task_status(t) == "blocked")
         return open_n, blocked_n
 
     owned_projects = [p for p in projects if owns(p)]
@@ -958,15 +1092,14 @@ def cmd_owner(owner: str):
     print("## 📁 Projects Owned")
     print()
     if owned_projects:
-        print("| Project | Status | Open | Blocked | Latest Update |")
-        print("|---------|--------|------|---------|---------------|")
+        print_table_header(["Project", "Status", "Health", "Target", "Progress", "Open", "Blocked",
+                            "Latest Update"])
         for p in owned_projects:
             # Roll up all tasks under the project (project-level + all streams)
-            ptasks = [t for t in tasks if t.get("project") == p["_slug"]]
-            open_n, blocked_n = counts(ptasks)
-            pstatus = p.get("status") or "active"
-            latest = p.get("_latest_update") or "—"
-            print(f"| {p['_title']} | {pstatus} | {open_n} | {blocked_n} | {latest} |")
+            open_n, blocked_n = counts(tasks_in(tasks, p["_slug"]))
+            print_row([p["_title"], entity_status(p), fmt_health(p), fmt_target(p),
+                       fmt_progress(tasks_in(history, p["_slug"])), open_n, blocked_n,
+                       p.get("_latest_update") or "—"])
     else:
         print("None")
     print()
@@ -974,19 +1107,900 @@ def cmd_owner(owner: str):
     print("## 🌊 Streams Owned")
     print()
     if owned_streams:
-        print("| Project | Stream | Status | Open | Blocked | Latest Update |")
-        print("|---------|--------|--------|------|---------|---------------|")
+        print_table_header(["Project", "Stream", "Status", "Health", "Target", "Progress", "Open",
+                            "Blocked", "Latest Update"])
         for s in owned_streams:
-            stasks = [t for t in tasks
-                      if t.get("project") == s["_project_slug"] and t.get("stream") == s["_slug"]]
-            open_n, blocked_n = counts(stasks)
-            proj_name = project_display_name(s["_project_slug"])
-            sstatus = s.get("status") or "active"
-            latest = s.get("_latest_update") or "—"
-            print(f"| {proj_name} | {s['_title']} | {sstatus} | {open_n} | {blocked_n} | {latest} |")
+            open_n, blocked_n = counts(tasks_in(tasks, s["_project_slug"], s["_slug"]))
+            print_row([project_display_name(s["_project_slug"]), s["_title"], entity_status(s),
+                       fmt_health(s), fmt_target(s),
+                       fmt_progress(tasks_in(history, s["_project_slug"], s["_slug"])),
+                       open_n, blocked_n, s.get("_latest_update") or "—"])
     else:
         print("None")
     print()
+
+
+# ---------------------------------------------------------------------------
+# Timeline (Mermaid Gantt chart) — one project, or the whole portfolio
+# ---------------------------------------------------------------------------
+
+TIMELINE_DONE_WINDOW_DAYS = 30  # completed tasks older than this are left off the chart
+MAX_BAR_TITLE = 45
+TIMELINE_LEGEND = ("_Legend: grey = done · highlighted = in progress · red = blocked, overdue, "
+                   "past target, or off-track. Task bars run from `start_date` (or `created`) to "
+                   "`due_date`; project and stream bars run to `target_date`._")
+
+
+def mermaid_text(s: str) -> str:
+    """Make text safe for a Mermaid gantt title, section, or bar name."""
+    s = (s or "").replace(":", " -").replace(";", ",").replace("#", "")
+    s = re.sub(r"\s+", " ", s).strip()
+    return s or "Untitled"
+
+
+def gantt_bar(name: str, tags: list[str], start: date, end: date) -> str:
+    """A Mermaid gantt bar covering start..end, both inclusive."""
+    start = min(start, end)
+    tag_str = "".join(f"{tag}, " for tag in tags)
+    # Mermaid end dates are exclusive, so add a day to include the end date itself
+    return f"    {mermaid_text(name)} :{tag_str}{start}, {end + timedelta(days=1)}"
+
+
+def gantt_milestone(name: str, when: date) -> str:
+    return f"    {mermaid_text(name)} :milestone, {when}, 0d"
+
+
+def task_span(task: dict) -> tuple[date, date] | None:
+    """(start, end) of a task's bar, or None when it has no date to place it on."""
+    if task_status(task) == "done":
+        end = closed_date(task) or parse_date(task.get("due_date"))
+    else:
+        end = parse_date(task.get("due_date"))
+    if not end:
+        return None
+    start = parse_date(task.get("start_date")) or parse_date(task.get("created")) or end
+    return min(start, end), end
+
+
+def task_bar_tags(task: dict, today: date) -> list[str]:
+    status = task_status(task)
+    if status == "done":
+        return ["done"]
+    tags = []
+    due = parse_date(task.get("due_date"))
+    if status == "blocked" or (due and due < today):
+        tags.append("crit")
+    if status == "in-progress":
+        tags.append("active")
+    return tags
+
+
+def entity_span(entity: dict) -> tuple[date, date] | None:
+    """(start, end) of a project/stream bar, or None without a target_date."""
+    end = parse_date(entity.get("target_date"))
+    if not end:
+        return None
+    start = parse_date(entity.get("start_date")) or parse_date(entity.get("created")) or end
+    return min(start, end), end
+
+
+def entity_bar_tags(entity: dict) -> list[str]:
+    if entity_status(entity) == "completed":
+        return ["done"]
+    if entity_is_late(entity) or str(entity.get("health") or "").lower() == "off-track":
+        return ["crit"]
+    return []
+
+
+def task_bar_name(task: dict) -> str:
+    title = task["_title"]
+    if len(title) > MAX_BAR_TITLE:
+        title = title[:MAX_BAR_TITLE - 1] + "…"
+    return f"{task.get('id') or '???'} {title}"
+
+
+def print_gantt(title: str, sections: list[tuple[str, list[str]]], dates: list[date]):
+    """Print a ```mermaid gantt block. sections = [(section name, [bar lines]), ...]."""
+    sections = [(name, bars) for name, bars in sections if bars]
+    if not sections:
+        print("_Nothing to chart yet — add `target_date` to projects/streams, or `due_date` to tasks._")
+        print()
+        return
+    wide = bool(dates) and (max(dates) - min(dates)).days > 180
+    print("```mermaid")
+    print("gantt")
+    print(f"    title {mermaid_text(title)}")
+    print("    dateFormat YYYY-MM-DD")
+    print(f"    axisFormat {'%b %Y' if wide else '%b %d'}")
+    for name, bars in sections:
+        print(f"    section {mermaid_text(name)}")
+        for bar in bars:
+            print(bar)
+    print("```")
+    print()
+    print(TIMELINE_LEGEND)
+    print()
+
+
+def timeline_project(slug: str):
+    today = date.today()
+    project = next(p for p in load_projects() if p["_slug"] == slug)
+    history = load_all_tasks() + load_archived_tasks()
+    project_tasks = tasks_in(history, slug)
+    charted = [t for t in project_tasks if task_status(t) != "cancelled"]
+    cutoff = today - timedelta(days=TIMELINE_DONE_WINDOW_DAYS)
+
+    sections: list[tuple[str, list[str]]] = []
+    dates: list[date] = []
+    unscheduled: list[dict] = []
+    hidden_done = 0
+
+    def task_bars(tasks: list[dict]) -> list[str]:
+        nonlocal hidden_done
+        bars = []
+        placed = [(task_span(t), t) for t in tasks]
+        for span, t in sorted(placed, key=lambda x: x[0] or (date.max, date.max)):
+            if span is None:
+                if is_open(t):
+                    unscheduled.append(t)
+                continue
+            if task_status(t) == "done" and span[1] < cutoff:
+                hidden_done += 1
+                continue
+            dates.extend(span)
+            bars.append(gantt_bar(task_bar_name(t), task_bar_tags(t, today), *span))
+        return bars
+
+    print(f"# 🗓️ Timeline: {project['_title']} — {today}")
+    print()
+    print(f"> {fmt_entity_meta(project, project_tasks)}")
+    print()
+
+    # Project window + target milestone, then project-level tasks
+    project_bars = []
+    span = entity_span(project)
+    if span:
+        dates.extend(span)
+        project_bars.append(gantt_bar(project["_title"], entity_bar_tags(project), *span))
+        project_bars.append(gantt_milestone("Target", span[1]))
+    sections.append((project["_title"], project_bars + task_bars([t for t in charted if not t.get("stream")])))
+
+    # One section per stream: stream window, then its tasks
+    no_target = []
+    for stream in load_streams(slug):
+        stream_bars = []
+        sspan = entity_span(stream)
+        if sspan:
+            dates.extend(sspan)
+            stream_bars.append(gantt_bar(f"{stream['_title']} (stream)", entity_bar_tags(stream), *sspan))
+        elif entity_status(stream) != "completed":
+            no_target.append(stream["_title"])
+        stream_bars += task_bars([t for t in charted if t.get("stream") == stream["_slug"]])
+        sections.append((stream["_title"], stream_bars))
+
+    print_gantt(project["_title"], sections, dates)
+
+    if not span:
+        print("_The project has no `target_date`, so it has no bar or target milestone._")
+        print()
+    if no_target:
+        print(f"_Streams without a `target_date`: {', '.join(no_target)}._")
+        print()
+    if unscheduled:
+        print(f"**Not on the timeline** — {len(unscheduled)} open task(s) without a `due_date`:")
+        print()
+        for t in sorted(unscheduled, key=priority_sort_key):
+            print(f"- {t.get('id') or '???'} — {t['_title']} ({fmt_status(t)}, {fmt_owners(t)})")
+        print()
+    if hidden_done:
+        print(f"_{hidden_done} task(s) completed more than {TIMELINE_DONE_WINDOW_DAYS} days ago are not shown._")
+        print()
+
+
+def timeline_portfolio():
+    today = date.today()
+    projects = [p for p in load_projects() if entity_status(p) != "completed"]
+
+    print(f"# 🗓️ Portfolio Timeline — {today}")
+    print()
+
+    sections: list[tuple[str, list[str]]] = []
+    dates: list[date] = []
+    unscheduled: list[str] = []
+    for p in projects:
+        bars = []
+        span = entity_span(p)
+        if span:
+            dates.extend(span)
+            bars.append(gantt_bar(p["_title"], entity_bar_tags(p), *span))
+        else:
+            unscheduled.append(p["_title"])
+        for s in load_streams(p["_slug"]):
+            sspan = entity_span(s)
+            if sspan:
+                dates.extend(sspan)
+                bars.append(gantt_bar(s["_title"], entity_bar_tags(s), *sspan))
+            elif entity_status(s) != "completed":
+                unscheduled.append(f"{p['_title']} / {s['_title']}")
+        sections.append((p["_title"], bars))
+
+    print_gantt("Portfolio", sections, dates)
+
+    if unscheduled:
+        print(f"**Not on the timeline** — no `target_date`: {', '.join(unscheduled)}")
+        print()
+
+
+def cmd_timeline(project_slug: str | None):
+    if project_slug:
+        timeline_project(project_slug)
+    else:
+        timeline_portfolio()
+
+
+# ---------------------------------------------------------------------------
+# Data check — validates every file under data/ (read-only, never saved)
+# ---------------------------------------------------------------------------
+
+KNOWN_FIELDS = {
+    "task": {"id", "type", "project", "stream", "owners", "owner", "completion_mode", "completions",
+             "status", "priority", "start_date", "due_date", "created", "completed_date",
+             "cancelled_date", "tags", "blocked_by", "links", "source_meeting"},
+    "project": {"type", "status", "health", "owners", "owner", "summary", "start_date",
+                "target_date", "created", "links"},
+    "stream": {"type", "project", "status", "health", "owners", "owner", "summary", "start_date",
+               "target_date", "created", "links"},
+    "team-member": {"type", "full_name", "first_name", "role", "self"},
+    "meeting": {"type", "date", "area", "project", "stream", "attendees", "tags", "links",
+                "source_transcript"},
+    "note": {"type", "date", "area", "project", "stream", "tags", "links"},
+    "area": {"type", "slug", "summary", "created"},
+    "index": {"type"},
+}
+TASK_ID_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)?-\d{3,}$")
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+class CheckReport:
+    def __init__(self):
+        self.errors: set[tuple[str, str]] = set()
+        self.warnings: set[tuple[str, str]] = set()
+
+    def error(self, path, msg: str):
+        self.errors.add((rel_path(path), msg))
+
+    def warn(self, path, msg: str):
+        self.warnings.add((rel_path(path), msg))
+
+
+def rel_path(path) -> str:
+    p = Path(path)
+    try:
+        rel = p.relative_to(PROJECT_ROOT).as_posix()
+    except ValueError:
+        rel = p.as_posix()
+    return rel + "/" if p.is_dir() else rel
+
+
+def load_checked(path: Path, report: CheckReport, kind: str | None, required: bool = True):
+    """Read a file's front matter, lint its syntax, and check its `type`.
+
+    Returns (fm, raw) where raw maps each field to its unparsed value, or (None, None)
+    when the front matter can't be read at all.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        report.error(path, "not valid UTF-8 — plainpm can't read this file")
+        return None, None
+    except OSError as e:
+        report.error(path, f"can't read file ({e.strerror})")
+        return None, None
+    if text.startswith("﻿"):
+        report.error(path, "file starts with a byte-order mark (BOM), so its front matter isn't read — "
+                           "re-save it as UTF-8 without BOM")
+        return None, None
+    m = re.match(r"^---\s*\n(.*?\n)---", text, re.DOTALL)
+    if not m:
+        msg = "no YAML front matter (`---` block at the top)"
+        if required:
+            report.error(path, msg + " — dashboards ignore this file")
+        else:
+            report.warn(path, msg)
+        return None, None
+
+    raw: dict[str, str] = {}
+    multiline_reported: set[str] = set()
+    last_key = None
+    for line in m.group(1).splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if line[0] in " \t" or stripped.startswith("- "):
+            key = last_key or "(unknown)"
+            if key not in multiline_reported:
+                multiline_reported.add(key)
+                report.error(path, f"`{key}` uses multi-line YAML, which plainpm can't read — "
+                                   f"write it inline, e.g. `{key}: [a, b]`")
+            continue
+        if ":" not in stripped:
+            report.error(path, f"can't parse front matter line `{stripped}`")
+            continue
+        key, _, val = stripped.partition(":")
+        key = key.strip()
+        if key in raw:
+            report.error(path, f"duplicate field `{key}` — only the last value is used")
+        raw[key] = val.strip()
+        last_key = key
+
+    fm = parse_front_matter(path)
+    ftype = fm.get("type")
+    if kind and ftype != kind:
+        if ftype:
+            report.error(path, f"`type: {ftype}` but files here must be `type: {kind}` — dashboards ignore it")
+        else:
+            report.error(path, f"missing `type: {kind}` — dashboards ignore this file")
+    known = KNOWN_FIELDS.get(kind or ftype or "")
+    if known:
+        for key in raw:
+            if key not in known:
+                report.warn(path, f"unknown field `{key}` (typo?)")
+    return fm, raw
+
+
+def check_date(path: Path, fm: dict, key: str, report: CheckReport) -> date | None:
+    v = fm.get(key)
+    if v in (None, ""):
+        return None
+    if not isinstance(v, str) or not DATE_RE.match(v) or parse_date(v) is None:
+        report.error(path, f"`{key}` is not a valid YYYY-MM-DD date: `{v}`")
+        return None
+    return parse_date(v)
+
+
+def check_list(path: Path, fm: dict, key: str, report: CheckReport) -> list[str]:
+    v = fm.get(key)
+    if v is None:
+        return []
+    if not isinstance(v, list):
+        report.error(path, f"`{key}` should be an inline list like `[a, b]`, got `{v}`")
+        return []
+    return [x for x in v if x]
+
+
+def check_links(path: Path, raw: dict, report: CheckReport):
+    v = raw.get("links")
+    if v in (None, "", "[]"):
+        return
+    example = '`links: [{label: "Design doc", url: "https://…"}]`'
+    if not (v.startswith("[") and v.endswith("]")):
+        report.warn(path, f"`links` should be an inline list like {example}")
+        return
+    inner = v[1:-1].strip()
+    items = re.findall(r"\{[^{}]*\}", inner)
+    leftover = re.sub(r"\{[^{}]*\}", "", inner).replace(",", "").strip()
+    if leftover or not items:
+        report.warn(path, f"`links` should be an inline list like {example}")
+        return
+    for item in items:
+        if not re.search(r"\blabel\s*:", item) or not re.search(r"\burl\s*:", item):
+            report.warn(path, f"link `{item}` needs both a `label` and a `url`")
+
+
+def resolve_data_path(value: str) -> bool:
+    """True if a path stored in front matter (e.g. source_meeting) points to an existing file."""
+    v = value.strip().lstrip("./")
+    return any((base / v).exists() for base in (PROJECT_ROOT, DATA_DIR))
+
+
+def check_owners(path: Path, fm: dict, raw: dict, roster: set[str], report: CheckReport) -> list[str]:
+    """Validate `owners` (and the legacy `owner` field). Returns the owner names."""
+    owners = check_list(path, fm, "owners", report)
+    if "owner" in raw:
+        legacy = fm.get("owner")
+        if "owners" in raw:
+            report.warn(path, "has both legacy `owner` and `owners` — remove `owner`")
+        else:
+            report.warn(path, f"uses the legacy `owner` field — change it to `owners: [{legacy or ''}]`")
+        if not owners and isinstance(legacy, str) and legacy:
+            owners = [legacy]
+    by_lower = {name.lower(): name for name in roster}
+    for name in owners:
+        if name in roster:
+            continue
+        hint = f" (did you mean `{by_lower[name.lower()]}`?)" if name.lower() in by_lower else ""
+        report.error(path, f"owner `{name}` doesn't match any team member's `first_name` in data/team/{hint}")
+    return owners
+
+
+def check_team(files: list[Path], report: CheckReport) -> dict[str, dict]:
+    team: dict[str, dict] = {}
+    self_files = []
+    for path in files:
+        fm, raw = load_checked(path, report, "team-member")
+        if fm is None:
+            continue
+        first = fm.get("first_name")
+        if not first:
+            report.error(path, "missing `first_name` — owners are matched by first name")
+            continue
+        if first in team:
+            report.error(path, f"duplicate `first_name: {first}` (also in {rel_path(team[first]['_file'])}) "
+                               "— owner matching is ambiguous")
+            continue
+        fm["_file"] = path
+        team[first] = fm
+        self_val = str(fm.get("self") or "false").lower()
+        if self_val not in ("true", "false"):
+            report.warn(path, f"`self` should be `true` or `false`, got `{fm.get('self')}`")
+        if self_val == "true":
+            self_files.append(path)
+    if len(self_files) > 1:
+        for path in self_files:
+            report.error(path, "more than one team member has `self: true` — \"me\" is ambiguous")
+    if not team:
+        report.warn(DATA_DIR / "team", "no team members found — add yourself (see templates/team-member.md)")
+    elif len(team) > 1 and not self_files:
+        report.warn(DATA_DIR / "team", "no team member has `self: true`, so \"me\"/\"my\" can't be resolved")
+    return team
+
+
+def check_entity(path: Path, fm: dict, raw: dict, roster: set[str], report: CheckReport):
+    """Checks shared by project.md and stream.md."""
+    status = fm.get("status")
+    if not status:
+        report.warn(path, "missing `status` — dashboards treat it as `active`")
+    elif str(status).lower() not in ENTITY_STATUSES:
+        report.error(path, f"`status: {status}` is not one of: {', '.join(ENTITY_STATUSES)}")
+    health = fm.get("health")
+    if health and str(health).lower() not in HEALTH_VALUES:
+        report.error(path, f"`health: {health}` is not one of: {', '.join(HEALTH_VALUES)}")
+    check_date(path, fm, "created", report)
+    start = check_date(path, fm, "start_date", report)
+    target = check_date(path, fm, "target_date", report)
+    if start and target and start > target:
+        report.error(path, f"`start_date` {start} is after `target_date` {target}")
+    check_owners(path, fm, raw, roster, report)
+    check_links(path, raw, report)
+    if entity_is_late(fm):
+        msg = f"past its `target_date` ({target}) but not completed"
+        if str(health or "").lower() == "on-track":
+            msg += ", and `health` still says on-track"
+        report.warn(path, msg + " — update the target date, health, or status")
+
+
+def check_task(path: Path, fm: dict, raw: dict, loc: dict, roster: set[str], report: CheckReport,
+               today: date):
+    tid = fm.get("id")
+    if not tid:
+        report.error(path, "missing `id`")
+    elif not TASK_ID_RE.match(str(tid)):
+        report.error(path, f"`id: {tid}` doesn't follow the ID format (ALPHA-001, ALPHA-BE-001, TASK-001)")
+    elif tid != path.stem:
+        report.warn(path, f"file name doesn't match `id: {tid}` (expected {tid}.md)")
+
+    if not loc["archived"]:
+        # Front matter must agree with the folder the file lives in — dashboards trust the front matter
+        exp_p, exp_s = loc["project"], loc["stream"]
+        got_p, got_s = fm.get("project") or None, fm.get("stream") or None
+        if "project" not in raw:
+            if exp_p:
+                report.warn(path, f"missing `project: {exp_p}` (dashboards infer it from the folder)")
+        elif got_p != exp_p:
+            where = f"project folder `{exp_p}`" if exp_p else "the standalone data/tasks/ folder"
+            report.error(path, f"`project: {got_p or '(empty)'}` doesn't match its location ({where}) "
+                               "— dashboards will group it under the wrong project")
+        if "stream" not in raw:
+            if exp_s:
+                report.warn(path, f"missing `stream: {exp_s}` (dashboards infer it from the folder)")
+        elif got_s != exp_s:
+            where = f"stream folder `{exp_s}`" if exp_s else "a folder outside any stream"
+            report.error(path, f"`stream: {got_s or '(empty)'}` doesn't match its location ({where}) "
+                               "— dashboards will group it under the wrong stream")
+        if tid and TASK_ID_RE.match(str(tid)):
+            parts = str(tid).split("-")
+            if exp_p is None and parts[0] != "TASK":
+                report.error(path, f"standalone task IDs use `TASK-NNN`, got `{tid}`")
+            elif exp_p and parts[0] == "TASK":
+                report.error(path, f"`{tid}` uses the standalone `TASK-` prefix inside a project")
+            elif exp_p and not exp_s and len(parts) != 2:
+                report.error(path, f"project-level task IDs look like `PROJECT-NNN`, got `{tid}`")
+            elif exp_s and len(parts) != 3:
+                report.error(path, f"stream task IDs look like `PROJECT-STREAM-NNN`, got `{tid}`")
+
+    status = task_status(fm)
+    if not status:
+        report.error(path, "missing `status` — the task won't appear in most dashboard sections")
+    elif status not in TASK_STATUSES:
+        report.error(path, f"`status: {fm.get('status')}` is not one of: {', '.join(TASK_STATUSES)}")
+    priority = str(fm.get("priority") or "").lower()
+    if not priority:
+        report.warn(path, "missing `priority` — dashboards treat it as medium")
+    elif priority not in PRIORITIES:
+        report.error(path, f"`priority: {fm.get('priority')}` is not one of: {', '.join(PRIORITIES)}")
+    mode = str(fm.get("completion_mode") or "any").lower()
+    if mode not in COMPLETION_MODES:
+        report.error(path, f"`completion_mode: {fm.get('completion_mode')}` is not one of: any, all")
+
+    created = check_date(path, fm, "created", report)
+    if not fm.get("created"):
+        report.warn(path, "missing `created` date — days open can't be calculated")
+    start = check_date(path, fm, "start_date", report)
+    due = check_date(path, fm, "due_date", report)
+    completed = check_date(path, fm, "completed_date", report)
+    cancelled = check_date(path, fm, "cancelled_date", report)
+    if start and due and start > due:
+        report.error(path, f"`start_date` {start} is after `due_date` {due}")
+    if completed and created and completed < created:
+        report.warn(path, f"`completed_date` {completed} is before `created` {created}")
+    for key, d in (("completed_date", completed), ("cancelled_date", cancelled)):
+        if d and d > today:
+            report.warn(path, f"`{key}` {d} is in the future")
+
+    if status == "done" and not fm.get("completed_date"):
+        report.error(path, "`status: done` but no `completed_date` — reports will miss when it was finished")
+    if fm.get("completed_date") and status and status != "done":
+        report.warn(path, f"has a `completed_date` but `status` is `{status}` — only done tasks keep a completed_date")
+    if status == "cancelled" and not fm.get("cancelled_date"):
+        report.error(path, "`status: cancelled` but no `cancelled_date`")
+    if fm.get("cancelled_date") and status and status != "cancelled":
+        report.warn(path, f"has a `cancelled_date` but `status` is `{status}` — only cancelled tasks keep a cancelled_date")
+
+    owners = check_owners(path, fm, raw, roster, report)
+    if mode == "all" and len(owners) > 1:
+        comps = fm.get("completions")
+        if not isinstance(comps, dict):
+            report.error(path, "`completion_mode: all` needs a `completions` map, e.g. "
+                               f"`completions: {{{', '.join(f'{o}: null' for o in owners)}}}`")
+        else:
+            missing = [o for o in owners if o not in comps]
+            extra = [k for k in comps if k not in owners]
+            if missing:
+                report.error(path, f"`completions` is missing {', '.join(missing)}")
+            if extra:
+                report.error(path, f"`completions` has names that aren't in `owners`: {', '.join(extra)}")
+            for name, v in comps.items():
+                if v and (not DATE_RE.match(v) or parse_date(v) is None):
+                    report.error(path, f"`completions` date for {name} is not YYYY-MM-DD: `{v}`")
+            values = [comps.get(o) for o in owners]
+            if all(values) and status not in CLOSED_STATUSES:
+                report.warn(path, f"every owner has completed their part but `status` is `{status}` — mark it done?")
+            if status == "done" and not all(values):
+                report.error(path, "`status: done` but not every owner's part is recorded in `completions`")
+
+    blocked_by = check_list(path, fm, "blocked_by", report)
+    if tid and tid in blocked_by:
+        report.error(path, "`blocked_by` lists the task itself")
+    check_list(path, fm, "tags", report)
+    check_links(path, raw, report)
+    source = fm.get("source_meeting")
+    if isinstance(source, str) and source and not resolve_data_path(source):
+        report.warn(path, f"`source_meeting` points to a file that doesn't exist: `{source}`")
+    if loc["archived"] and status not in CLOSED_STATUSES:
+        report.warn(path, f"archived task has `status: {status or '(missing)'}` — only done or cancelled tasks belong in the archive")
+
+
+def check_task_graph(tasks: list[dict], projects: dict, streams: dict, report: CheckReport):
+    """Cross-file checks: duplicate IDs, dependencies, ID prefixes, and schedule containment."""
+    by_id: dict[str, list[dict]] = defaultdict(list)
+    for t in tasks:
+        if isinstance(t.get("id"), str) and t["id"]:
+            by_id[t["id"]].append(t)
+    for tid, group in by_id.items():
+        if len(group) > 1:
+            for t in group:
+                others = [rel_path(o["_file"]) for o in group if o is not t]
+                report.error(t["_file"], f"duplicate task ID `{tid}` — also used by {', '.join(others)}")
+    # For duplicated IDs, prefer the active (non-archived) copy
+    index = {tid: next((t for t in group if not t.get("_archived")), group[0]) for tid, group in by_id.items()}
+
+    # Dependencies
+    for t in tasks:
+        deps = t.get("blocked_by") if isinstance(t.get("blocked_by"), list) else []
+        deps = [d for d in deps if d and d != t.get("id")]
+        missing = [d for d in deps if d not in index]
+        if missing:
+            report.error(t["_file"], f"`blocked_by` references unknown task(s): {', '.join(missing)}")
+        if t.get("_archived") or not is_open(t):
+            continue
+        known = [d for d in deps if d in index]
+        cancelled_deps = [d for d in known if task_status(index[d]) == "cancelled"]
+        if cancelled_deps:
+            report.warn(t["_file"], f"depends on cancelled task(s) {', '.join(cancelled_deps)} "
+                                    "— remove the dependency or rethink this task")
+        if task_status(t) == "blocked" and known and not missing and not any(is_open(index[d]) for d in known):
+            report.warn(t["_file"], "every `blocked_by` task is closed but `status` is still `blocked` — unblock it?")
+
+    # Dependency cycles
+    graph = {tid: [d for d in (t.get("blocked_by") if isinstance(t.get("blocked_by"), list) else [])
+                   if d in index and d != tid]
+             for tid, t in index.items()}
+    state: dict[str, int] = {}  # 1 = visiting, 2 = done
+    seen_cycles: set[frozenset] = set()
+
+    def visit(node: str, stack: list[str]):
+        state[node] = 1
+        stack.append(node)
+        for nxt in graph[node]:
+            if state.get(nxt) == 1:
+                cycle = stack[stack.index(nxt):] + [nxt]
+                key = frozenset(cycle)
+                if key not in seen_cycles:
+                    seen_cycles.add(key)
+                    report.error(index[nxt]["_file"], f"dependency cycle: {' → '.join(cycle)}")
+            elif nxt not in state:
+                visit(nxt, stack)
+        stack.pop()
+        state[node] = 2
+
+    for node in graph:
+        if node not in state:
+            visit(node, [])
+
+    # ID prefixes: one per project, one per stream, no prefix shared between projects
+    prefix_projects: dict[str, set[str]] = defaultdict(set)
+    for slug, project in projects.items():
+        ids = [str(t["id"]) for t in tasks if t.get("project") == slug and TASK_ID_RE.match(str(t.get("id") or ""))]
+        prefixes = sorted({i.split("-")[0] for i in ids})
+        for p in prefixes:
+            prefix_projects[p].add(slug)
+        if len(prefixes) > 1:
+            report.warn(project["_file"], f"tasks use mixed ID prefixes ({', '.join(prefixes)}) — keep one per project")
+    for prefix, slugs in prefix_projects.items():
+        if len(slugs) > 1:
+            for slug in slugs:
+                report.warn(projects[slug]["_file"], f"ID prefix `{prefix}` is also used by "
+                                                     f"{', '.join(s for s in sorted(slugs) if s != slug)}")
+    for (pslug, sslug), stream in streams.items():
+        ids = [str(t["id"]) for t in tasks if t.get("project") == pslug and t.get("stream") == sslug
+               and TASK_ID_RE.match(str(t.get("id") or "")) and len(str(t["id"]).split("-")) == 3]
+        abbrevs = sorted({i.split("-")[1] for i in ids})
+        if len(abbrevs) > 1:
+            report.warn(stream["_file"], f"tasks use mixed stream abbreviations ({', '.join(abbrevs)})")
+
+    # Open tasks vs. their project/stream
+    for t in tasks:
+        if t.get("_archived") or not is_open(t) or not t.get("project"):
+            continue
+        project = projects.get(t.get("project"))
+        stream = streams.get((t.get("project"), t.get("stream"))) if t.get("stream") else None
+        if project and entity_status(project) == "completed":
+            report.warn(t["_file"], "open task in a completed project")
+        if stream and entity_status(stream) == "completed":
+            report.warn(t["_file"], "open task in a completed stream")
+        due = parse_date(t.get("due_date"))
+        for kind, entity in (("stream", stream), ("project", project)):
+            target = parse_date(entity.get("target_date")) if entity else None
+            if target:
+                if due and due > target:
+                    report.warn(t["_file"], f"`due_date` {due} is after the {kind}'s `target_date` {target}")
+                break
+
+
+def check_note(path: Path, loc: dict, projects: dict, streams: dict, areas: set[str], report: CheckReport):
+    fm, raw = load_checked(path, report, None, required=False)
+    if fm is None:
+        return
+    ntype = fm.get("type")
+    if ntype == "task":
+        report.error(path, "task file inside a notes folder — dashboards won't see it; move it to a tasks/YYYY/ folder")
+        return
+    if ntype not in ("meeting", "note"):
+        report.warn(path, f"`type` should be `meeting` or `note`, got `{ntype or '(missing)'}`")
+        return
+    if not fm.get("date"):
+        report.warn(path, "missing `date`")
+    check_date(path, fm, "date", report)
+    area, project, stream = fm.get("area"), fm.get("project"), fm.get("stream")
+    if area and area not in areas:
+        report.warn(path, f"`area: {area}` doesn't match any folder in data/meetings/areas/")
+    if project and project not in projects:
+        report.warn(path, f"`project: {project}` doesn't match any project")
+    if stream and project and (project, stream) not in streams:
+        report.warn(path, f"`stream: {stream}` doesn't match any stream in `{project}`")
+    if loc.get("project") and project != loc["project"]:
+        report.warn(path, f"`project: {project or '(empty)'}` doesn't match its folder (`{loc['project']}`)")
+    if loc.get("area") and area != loc["area"]:
+        report.warn(path, f"`area: {area or '(empty)'}` doesn't match its folder (`{loc['area']}`)")
+    check_list(path, fm, "attendees", report)
+    check_list(path, fm, "tags", report)
+    check_links(path, raw, report)
+    source = fm.get("source_transcript")
+    if isinstance(source, str) and source and not resolve_data_path(source):
+        report.warn(path, f"`source_transcript` points to a file that doesn't exist: `{source}`")
+
+
+def check_index(projects: dict, project_dirs: list[Path], report: CheckReport):
+    index_path = DATA_DIR / "projects" / "_index.md"
+    if not index_path.exists():
+        if project_dirs:
+            report.warn(index_path, "missing — /status and /new-task use it to find projects")
+        return
+    text = index_path.read_text(encoding="utf-8", errors="replace")
+    lines = text.splitlines()
+    for slug, project in projects.items():
+        row = next((line for line in lines if f"projects/{slug}/" in line), None)
+        if row is None:
+            report.warn(index_path, f"project `{slug}` is not listed")
+            continue
+        cells = [c.strip().strip("`").lower() for c in row.strip().strip("|").split("|")]
+        listed = next((c for c in cells if c in ENTITY_STATUSES), None)
+        if listed and listed != entity_status(project):
+            report.warn(index_path, f"lists `{slug}` as `{listed}` but its project.md says `{entity_status(project)}`")
+    existing = {d.name for d in project_dirs}
+    for slug in sorted(set(re.findall(r"projects/([A-Za-z0-9][A-Za-z0-9_-]*)/", text))):
+        if slug not in existing:
+            report.warn(index_path, f"lists `{slug}`, but there's no data/projects/{slug}/ folder")
+
+
+def classify_data_file(path: Path) -> tuple[str, dict]:
+    """Decide what a markdown file under data/ should be, based on where it lives."""
+    parts = path.relative_to(DATA_DIR).parts
+    n = len(parts)
+    top = parts[0]
+    if top == "team" and n == 2:
+        return "team", {}
+    if top == "tasks":
+        return "task", {"project": None, "stream": None, "archived": False}
+    if top == "archive":
+        return "task", {"project": None, "stream": None, "archived": True}
+    if top == "projects":
+        if n == 2 and parts[1] == "_index.md":
+            return "index", {}
+        if n >= 3:
+            p = parts[1]
+            if n == 3 and parts[2] == "project.md":
+                return "project", {"project": p}
+            if parts[2] == "tasks":
+                return "task", {"project": p, "stream": None, "archived": False}
+            if parts[2] == "meetings":
+                return "note", {"project": p}
+            if parts[2] == "streams" and n >= 5:
+                s = parts[3]
+                if n == 5 and parts[4] == "stream.md":
+                    return "stream", {"project": p, "stream": s}
+                if parts[4] == "tasks":
+                    return "task", {"project": p, "stream": s, "archived": False}
+                if parts[4] == "notes":
+                    return "note", {"project": p}
+    if top == "meetings" and n >= 3:
+        if parts[1] == "notes":
+            return "note", {}
+        if parts[1] == "areas" and n >= 4:
+            if n == 4 and parts[3] == "area.md":
+                return "area", {"area": parts[2]}
+            if parts[3] == "notes":
+                return "note", {"area": parts[2]}
+    return "other", {}
+
+
+def subdirs(path: Path) -> list[Path]:
+    if not path.is_dir():
+        return []
+    return [d for d in sorted(path.iterdir()) if d.is_dir() and not d.name.startswith(".")]
+
+
+def print_check_report(report: CheckReport, counts: list[tuple[str, int]]):
+    print(f"# 🩺 Data Check — {date.today()}")
+    print()
+    print("Scanned " + ", ".join(f"{n} {label if n != 1 else label.removesuffix('s')}"
+                                 for label, n in counts) + ".")
+    print()
+    for title, items in (("❌ Errors", report.errors), ("⚠️ Warnings", report.warnings)):
+        if not items:
+            continue
+        print(f"## {title} ({len(items)})")
+        print()
+        print("| File | Problem |")
+        print("|------|---------|")
+        for file, msg in sorted(items):
+            safe = msg.replace("|", "\\|")
+            print(f"| `{file}` | {safe} |")
+        print()
+    if not report.errors and not report.warnings:
+        print("✅ All clear — no issues found.")
+    else:
+        print(f"**Result**: {len(report.errors)} error(s), {len(report.warnings)} warning(s). "
+              "Errors break dashboards or commands; warnings are inconsistencies worth a look.")
+    print()
+
+
+def cmd_check() -> int:
+    """Validate every file under data/. Prints a report; returns 1 if there are errors."""
+    report = CheckReport()
+    today = date.today()
+
+    buckets: dict[str, list[tuple[Path, dict]]] = defaultdict(list)
+    for path in sorted(DATA_DIR.rglob("*.md")):
+        parts = path.relative_to(DATA_DIR).parts
+        if any(part.startswith(".") for part in parts):
+            continue
+        if parts[0] == "reports" or parts[:2] == ("meetings", "transcripts"):
+            continue
+        kind, loc = classify_data_file(path)
+        buckets[kind].append((path, loc))
+
+    def guarded(path: Path, fn, *args):
+        try:
+            fn(*args)
+        except Exception as e:  # never let one odd file stop the whole check
+            report.error(path, f"couldn't be fully checked ({type(e).__name__}: {e})")
+
+    team = check_team([p for p, _ in buckets["team"]], report)
+    roster = set(team)
+
+    # Folder structure: every project/stream/area folder needs its definition file
+    project_dirs = subdirs(DATA_DIR / "projects")
+    for pdir in project_dirs:
+        if not (pdir / "project.md").exists():
+            report.error(pdir, "project folder has no project.md — its tasks won't appear in this_week or status")
+        for sdir in subdirs(pdir / "streams"):
+            if not (sdir / "stream.md").exists():
+                report.error(sdir, "stream folder has no stream.md — its tasks won't appear in this_week")
+    area_dirs = subdirs(DATA_DIR / "meetings" / "areas")
+    for adir in area_dirs:
+        if not (adir / "area.md").exists():
+            report.warn(adir, "area folder has no area.md")
+
+    projects: dict[str, dict] = {}
+    for path, loc in buckets["project"]:
+        fm, raw = load_checked(path, report, "project")
+        if fm is None:
+            continue
+        fm["_file"] = path
+        projects[loc["project"]] = fm
+        guarded(path, check_entity, path, fm, raw, roster, report)
+
+    streams: dict[tuple[str, str], dict] = {}
+    for path, loc in buckets["stream"]:
+        fm, raw = load_checked(path, report, "stream")
+        if fm is None:
+            continue
+        fm["_file"] = path
+        streams[(loc["project"], loc["stream"])] = fm
+        guarded(path, check_entity, path, fm, raw, roster, report)
+        if not fm.get("project"):
+            report.warn(path, f"missing `project: {loc['project']}`")
+        elif fm.get("project") != loc["project"]:
+            report.error(path, f"`project: {fm.get('project')}` doesn't match its folder (`{loc['project']}`)")
+        parent = projects.get(loc["project"])
+        stream_target = parse_date(fm.get("target_date"))
+        project_target = parse_date(parent.get("target_date")) if parent else None
+        if stream_target and project_target and stream_target > project_target:
+            report.warn(path, f"`target_date` {stream_target} is after the project's `target_date` {project_target}")
+
+    tasks: list[dict] = []
+    for path, loc in buckets["task"]:
+        fm, raw = load_checked(path, report, "task")
+        if fm is None:
+            continue
+        fm["_file"] = path
+        fm["_archived"] = loc["archived"]
+        tasks.append(fm)
+        guarded(path, check_task, path, fm, raw, loc, roster, report, today)
+    try:
+        check_task_graph(tasks, projects, streams, report)
+    except Exception as e:
+        report.error(DATA_DIR, f"cross-task checks failed ({type(e).__name__}: {e})")
+
+    area_names = {d.name for d in area_dirs}
+    for path, loc in buckets["area"]:
+        fm, raw = load_checked(path, report, "area")
+        if fm and fm.get("slug") and fm["slug"] != loc["area"]:
+            report.warn(path, f"`slug: {fm['slug']}` doesn't match its folder name `{loc['area']}`")
+    for path, loc in buckets["note"]:
+        guarded(path, check_note, path, loc, projects, streams, area_names, report)
+    for path, _ in buckets["other"]:
+        if parse_front_matter(path).get("type") == "task":
+            report.error(path, "task file outside a tasks/ folder — dashboards won't see it")
+    check_index(projects, project_dirs, report)
+
+    archived = sum(1 for t in tasks if t["_archived"])
+    print_check_report(report, [
+        ("projects", len(projects)), ("streams", len(streams)), ("tasks", len(tasks) - archived),
+        ("archived tasks", archived), ("team members", len(team)), ("notes", len(buckets["note"])),
+    ])
+    return 1 if report.errors else 0
 
 
 # ---------------------------------------------------------------------------
@@ -1001,8 +2015,11 @@ COMMANDS = {
 }
 
 
-def run_and_save(command_name: str, owner: str | None = None):
-    """Run a dashboard command, capture its output, save to reports/, print to stdout."""
+def run_and_save(command_name: str, arg: str | None = None):
+    """Run a dashboard command, capture its output, save to reports/, print to stdout.
+
+    `arg` is the owner name for `owner`, or the optional project slug for `timeline`.
+    """
     today = date.today()
     monday = today - timedelta(days=today.weekday())
 
@@ -1018,8 +2035,10 @@ def run_and_save(command_name: str, owner: str | None = None):
     report_dir = REPORTS_DIR / subdir / year / month
     report_dir.mkdir(parents=True, exist_ok=True)
     if command_name == "owner":
-        owner_slug = re.sub(r"[^a-z0-9]+", "-", (owner or "").lower()).strip("-") or "owner"
+        owner_slug = re.sub(r"[^a-z0-9]+", "-", (arg or "").lower()).strip("-") or "owner"
         report_path = report_dir / f"{file_date}-{owner_slug}-owner.md"
+    elif command_name == "timeline":
+        report_path = report_dir / f"{file_date}-{arg or 'portfolio'}-timeline.md"
     else:
         report_path = report_dir / f"{file_date}-{subdir}.md"
 
@@ -1029,7 +2048,9 @@ def run_and_save(command_name: str, owner: str | None = None):
     sys.stdout = buf
 
     if command_name == "owner":
-        cmd_owner(owner)
+        cmd_owner(arg)
+    elif command_name == "timeline":
+        cmd_timeline(arg)
     else:
         COMMANDS[command_name]()
 
@@ -1047,9 +2068,10 @@ def run_and_save(command_name: str, owner: str | None = None):
 
 
 def main():
-    valid = list(COMMANDS) + ["owner"]
+    valid = list(COMMANDS) + ["owner", "timeline", "check"]
     if len(sys.argv) < 2 or sys.argv[1] not in valid:
-        print(f"Usage: python {sys.argv[0]} <{'|'.join(COMMANDS)}|owner <first_name>>")
+        print(f"Usage: python {sys.argv[0]} "
+              f"<{'|'.join(COMMANDS)}|owner <first_name>|timeline [project-slug]|check>")
         sys.exit(1)
 
     if not DATA_DIR.exists():
@@ -1072,11 +2094,21 @@ def main():
         print("Or use a slash command like /new-task to create it automatically.", file=sys.stderr)
         sys.exit(1)
 
-    if sys.argv[1] == "owner":
+    if sys.argv[1] == "check":
+        # Read-only validation: printed, never saved to reports/
+        sys.exit(cmd_check())
+    elif sys.argv[1] == "owner":
         if len(sys.argv) < 3 or not " ".join(sys.argv[2:]).strip():
             print("Usage: python scripts/dashboard.py owner <first_name>", file=sys.stderr)
             sys.exit(1)
         run_and_save("owner", " ".join(sys.argv[2:]).strip())
+    elif sys.argv[1] == "timeline":
+        slug = " ".join(sys.argv[2:]).strip() or None
+        if slug and not (DATA_DIR / "projects" / slug / "project.md").exists():
+            available = ", ".join(p["_slug"] for p in load_projects()) or "(none)"
+            print(f"Error: no project with slug '{slug}'. Available: {available}", file=sys.stderr)
+            sys.exit(1)
+        run_and_save("timeline", slug)
     else:
         run_and_save(sys.argv[1])
 

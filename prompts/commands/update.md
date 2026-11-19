@@ -12,9 +12,13 @@ The user will describe changes in plain language:
 - "ALPHA-BE-001: blocked — waiting on API credentials"
 - "ALPHA-BE-003 is blocked by ALPHA-BE-001"
 - "Remove dependency on ALPHA-001 from ALPHA-BE-003"
+- "Cancel ALPHA-002 — client dropped the feature" (task cancelled)
+- "ALPHA-BE-004 starts next Monday" (task start date)
 - "Set the owner of project alpha to Ana" (project owner)
 - "Make Ana and Bob co-owners of the backend stream in project alpha" (stream co-owners)
 - "Put project beta on hold" (project status)
+- "Project alpha is at risk — vendor delay" (project health)
+- "Target date for the backend stream in project alpha is December 15" (stream target date)
 
 ## Instructions
 
@@ -35,10 +39,11 @@ Then extract:
 - **Field changes**: what to change on each target
 
 Supported fields for **tasks**:
-- `status`: must be one of `todo`, `in-progress`, `blocked`, `done`
+- `status`: must be one of `todo`, `in-progress`, `blocked`, `done`, `cancelled`. "Cancel", "drop", "won't do", or "not doing" a task means `cancelled` — never `done`.
 - `priority`: must be one of `critical`, `high`, `medium`, `low`
 - `owners`: list of team member `first_name` values. Self-references ("me", "my", "myself") resolve to the current user. When assigning multiple owners and `completion_mode` is not specified, ask: "Should this task be done when any one person completes it (`any`), or does each person need to complete it independently (`all`)?" Update `completion_mode` accordingly.
 - `due_date`: parse relative dates ("Friday" -> next Friday, "next week" -> next Monday). Format as YYYY-MM-DD.
+- `start_date`: when work is planned to begin; same date parsing as `due_date`. If the task has both, `start_date` must not be after `due_date` — if it would be, ask the user which date to change.
 - `tags`: append new tags to existing list (do not remove existing tags)
 - `blocked_by`: add or remove task IDs from the dependency list. Verify referenced IDs exist before adding. When removing, also check if this resolves all dependencies and suggest unblocking.
 - **Update note**: if the user provides context (e.g., "blocked — waiting on X"), add it under `### Updates`
@@ -46,7 +51,9 @@ Supported fields for **tasks**:
 Supported fields for **projects** and **streams**:
 - `owners`: list of team member `first_name` values (co-ownership = multiple names). Self-references resolve to the current user. Projects/streams have **no** `completion_mode` — do not ask about it. Use `owners: []` for unassigned.
 - `status`: must be one of `active`, `on-hold`, `completed`.
-- **Update note**: if the user provides context, add it under `### Updates`.
+- `health`: must be one of `on-track`, `at-risk`, `off-track` (or empty to clear). Health is the user's judgment — only set it when the user states it; never infer it.
+- `start_date` / `target_date`: YYYY-MM-DD, same date parsing as tasks. `start_date` must not be after `target_date`.
+- **Update note**: if the user provides context (e.g., "at risk — vendor delay"), add it under `### Updates`.
 
 ### Step 3 — Find and update each target
 
@@ -58,6 +65,11 @@ Supported fields for **projects** and **streams**:
    - Apply the requested changes to the YAML front matter
    - If reassigning `owners`, verify each name matches a team member in `data/team/*.md`. If any name doesn't match, ask the user.
    - If changing `status` to `done`, also set `completed_date` to today's date (YYYY-MM-DD)
+   - If changing `status` to `cancelled`:
+     - Set `cancelled_date` to today's date (YYYY-MM-DD). Leave `completed_date` empty.
+     - Add an update note `Cancelled — <reason>` using the user's reason, or just `Cancelled` if they gave none (don't block on asking).
+     - Scan open tasks for this ID in their `blocked_by`. For each, tell the user its blocker was cancelled and ask whether to remove the dependency or rethink that task. Don't change those tasks without approval.
+   - If **reopening** a task (changing `status` from `done` or `cancelled` back to `todo`, `in-progress`, or `blocked`): clear `completed_date` and `cancelled_date`. If the task has `completion_mode: all`, ask whether to reset its `completions` entries to `null`.
    - If adding an update note, append under `### Updates` following the **Same-Day Updates** convention in `CLAUDE.md`:
      - If no entry exists for today's date: add `- YYYY-MM-DD: <note>`
      - If a single-line entry for today already exists: convert it to the grouped format and add the new note as a sub-bullet
@@ -71,7 +83,7 @@ Supported fields for **projects** and **streams**:
    - Stream: `data/projects/<slug>/streams/<stream-slug>/stream.md` (the stream must be identified within a specific project; if the project or stream is ambiguous, ask).
 2. **If not found**: tell the user and skip it.
 3. **If found**:
-   - Apply the requested `owners` and/or `status` changes to the YAML front matter.
+   - Apply the requested `owners`, `status`, `health`, `start_date`, and/or `target_date` changes to the YAML front matter. If the file has no field for one of these yet (older projects/streams), add it to the front matter.
    - If reassigning `owners`, verify each name matches a team member in `data/team/*.md`. If any name doesn't match, ask the user.
    - If adding an update note, append it under `### Updates` following the **Same-Day Updates** convention (same rules as tasks above).
 
@@ -82,6 +94,10 @@ Show a summary table of all changes made:
 - Target is the task ID, project name, or "project / stream" for a stream.
 
 If any targets were not found, list them separately.
+
+### Step 5 — Validate
+
+Run `python scripts/dashboard.py check`. If it reports errors or warnings in any file you changed, fix them before finishing (ask the user when a fix needs a decision, such as a missing date). Don't touch other files — if the check reports issues elsewhere, just mention how many and suggest `/check`.
 
 ### If anything is ambiguous
 

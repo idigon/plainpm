@@ -51,13 +51,13 @@ Organize into the following sections:
 2. **Blockers** — all tasks with `status: blocked`
    - These need discussion to unblock. Include any update notes that explain the blocker.
 
-3. **Overdue** — tasks with `due_date` before today and `status` not `done`
+3. **Overdue** — tasks with `due_date` before today and `status` not `done` or `cancelled`
    - These need a status check. How far overdue? Still relevant?
 
 4. **In Progress** — tasks with `status: in-progress`
    - Quick status round. Any risks or issues?
 
-5. **Due This Week** — tasks with `due_date` within the current week (Mon-Sun) and `status` not `done`
+5. **Due This Week** — tasks with `due_date` within the current week (Mon-Sun) and `status` not `done` or `cancelled`
    - Upcoming deadlines to be aware of.
 
 6. **New / Unassigned** — tasks with `status: todo` and either no `owner` or recently created (within last 7 days)

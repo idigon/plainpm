@@ -56,9 +56,11 @@ For each task ID:
 ### Step 4 — Check for unblocked tasks
 
 After completing task(s), scan all open tasks for any that have the completed ID(s) in their `blocked_by` array. For each such task:
-- Check if **all** IDs in its `blocked_by` are now `done`.
-- If yes: notify the user that the task is now unblocked and suggest changing its status (e.g., "ALPHA-BE-003 is no longer blocked — move to todo/in-progress?").
+- Check if **all** IDs in its `blocked_by` are now closed (`done` or `cancelled`).
+- If yes: notify the user that the task is now unblocked and suggest changing its status (e.g., "ALPHA-BE-003 is no longer blocked — move to todo/in-progress?"). If any of those blockers was **cancelled** rather than done, say so — the task may need rethinking rather than just unblocking.
 - If no: mention that the task still has other unresolved dependencies.
+
+This command only marks work **done**. If the user wants to cancel or drop a task, use the `update` command instead (`status: cancelled`).
 
 ### Step 5 — Show summary
 
@@ -68,5 +70,9 @@ Show the user a summary of what was updated:
 - If any downstream tasks were unblocked, list them
 
 If any task IDs were not found, list them separately with a note.
+
+### Step 6 — Validate
+
+Run `python scripts/dashboard.py check`. If it reports errors or warnings in any file you changed, fix them before finishing (ask the user when a fix needs a decision). Don't touch other files — if the check reports issues elsewhere, just mention how many and suggest `/check`.
 
 $ARGUMENTS

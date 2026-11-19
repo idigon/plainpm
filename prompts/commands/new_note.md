@@ -107,6 +107,10 @@ If the user's note content includes action items or tasks that need doing:
 - Any proposed cross-reference updates (pending approval)
 - Any tasks created from action items
 
+### Step 8 — Validate
+
+Run `python scripts/dashboard.py check`. If it reports errors or warnings in any file you created or changed (the note, any new tasks or areas, updated entities), fix them before finishing (ask the user when a fix needs a decision). Don't touch other files — if the check reports issues elsewhere, just mention how many and suggest `/check`.
+
 ### If anything is ambiguous:
 - Ask the user to clarify before creating the file
 - Common ambiguities: which area/project/stream, whether to create a new area
