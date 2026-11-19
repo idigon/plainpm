@@ -60,7 +60,7 @@ mkdir -p data/projects data/team data/meetings/transcripts data/meetings/notes d
 
 Command prompts are in `prompts/commands/`. In Claude Code, these are wired as `/slash-commands`. In other agents, ask for them by name (e.g., "run today dashboard", "create a new task", "process this meeting").
 
-**Natural-language usage (Claude Code only).** Seven of the commands — `new-task`, `update`, `done`, `process-meeting`, `archive`, `status`, and `new-note` — are also exposed as skills, so you can just describe what you want and the right one will load automatically. For example, "Ana needs to fix the login bug by Friday" triggers `new-task`, and "mark ALPHA-001 done" triggers `done`. The slash commands still work the same way; skills are an alternative entry point, not a replacement. The four dashboards (`today`, `this_week`, `my-team`, `weekly-report`) and `agenda` remain slash-only.
+**Natural-language usage (Claude Code only).** Seven of the commands — `new-task`, `update`, `done`, `process-meeting`, `archive`, `status`, and `new-note` — are also exposed as skills, so you can just describe what you want and the right one will load automatically. For example, "Ana needs to fix the login bug by Friday" triggers `new-task`, and "mark ALPHA-001 done" triggers `done`. The slash commands still work the same way; skills are an alternative entry point, not a replacement. The four dashboards (`today`, `this_week`, `my-team`, `weekly-report`), `agenda`, and `check` remain slash-only.
 
 | Command | Prompt file | What it does |
 |---------|-------------|-------------|
@@ -72,11 +72,12 @@ Command prompts are in `prompts/commands/`. In Claude Code, these are wired as `
 | new-task | `prompts/commands/new_task.md` | Create a task from natural language |
 | new-note | `prompts/commands/new_note.md` | Create a note in an area, project, or stream |
 | process-meeting | `prompts/commands/process_meeting.md` | Process a .vtt transcript or .md notes into structured notes + tasks |
-| status | `prompts/commands/status.md` | Project status report (one project or all) |
+| status | `prompts/commands/status.md` | Project status report (one project or all), with a Gantt timeline |
 | done | `prompts/commands/done.md` | Mark task(s) as done |
-| update | `prompts/commands/update.md` | Batch update tasks from natural language |
+| update | `prompts/commands/update.md` | Batch update tasks, projects, and streams from natural language (including cancelling tasks) |
 | agenda | `prompts/commands/agenda.md` | Generate meeting agenda from open tasks |
-| archive | `prompts/commands/archive.md` | Archive old completed tasks to `data/archive/` |
+| archive | `prompts/commands/archive.md` | Archive old closed (done or cancelled) tasks to `data/archive/` |
+| check | `prompts/commands/check.md` | Validate all data files and propose fixes |
 
 ### new-task
 
@@ -137,7 +138,10 @@ Notes use `type: note` in front matter (vs `type: meeting` for meeting notes) an
 ```
 "Project status for project-alpha"    # Detailed report for one project
 "Portfolio status"                    # Summary across all projects
+"Show me the timeline for project alpha"
 ```
+
+Reports include each project's and stream's health, start → target dates (⚠️ when past target), and progress (% of non-cancelled tasks done, archived tasks included). They also embed a Mermaid Gantt chart from `python scripts/dashboard.py timeline [slug]`: the project window and target milestone, a bar per stream, and a bar per task from `start_date` (or `created`) to `due_date`. The portfolio report charts every project and stream that has a `target_date`.
 
 ### owner-report
 
@@ -163,6 +167,8 @@ Mark one or more tasks as done in a single command:
 
 The command sets `status: done` and `completed_date` to today. If you include a note, it's appended under `### Updates`.
 
+To drop a task instead of finishing it, use `update` ("Cancel ALPHA-002 — client dropped the feature") — see [Cancelling a task](#cancelling-a-task).
+
 ### update
 
 Batch update tasks, projects, and streams from natural language:
@@ -172,11 +178,15 @@ Batch update tasks, projects, and streams from natural language:
 "Reassign ALPHA-002 to Carlos, raise priority to high"
 "Set ALPHA-BE-001 due date to next Friday"
 "ALPHA-BE-001: blocked — waiting on API credentials"
+"Cancel ALPHA-002 — client dropped the feature"
+"ALPHA-BE-004 starts next Monday"
 "Set the owner of project alpha to Ana"
 "Make Ana and Bob co-owners of the backend stream in project alpha"
+"Project alpha is at risk — vendor delay"
+"Target date for the backend stream in project alpha is December 15"
 ```
 
-For **tasks**, supports changing `status`, `priority`, `owners`, `due_date`, `tags`, dependencies, and adding update notes. For **projects and streams**, supports changing `owners` (co-ownership allowed) and `status`. If anything is ambiguous, the command will ask you to clarify.
+For **tasks**, supports changing `status` (including `cancelled`), `priority`, `owners`, `start_date`, `due_date`, `tags`, dependencies, and adding update notes. For **projects and streams**, supports changing `owners` (co-ownership allowed), `status`, `health`, `start_date`, and `target_date`. If anything is ambiguous, the command will ask you to clarify.
 
 ### agenda
 
@@ -188,6 +198,19 @@ Generate a meeting agenda from open tasks:
 ```
 
 Builds sections for blockers, overdue, in-progress, due this week, and new/unassigned tasks. Output is displayed only — not saved automatically.
+
+### check
+
+Validate every data file and get proposed fixes:
+
+```
+"Check my data"
+"/check"
+```
+
+Runs `python scripts/dashboard.py check` (read-only; never saved to `data/reports/`). It catches problems that would otherwise fail silently: a task missing from dashboards because its `type` or `project` field is wrong, multi-line YAML the parser can't read, owners that don't match the roster, duplicate IDs (including against archived tasks), `blocked_by` pointing to unknown tasks or forming a cycle, `done` tasks without a `completed_date`, projects past their target date that still say on-track, and more. **Errors** break dashboards or commands; **warnings** are inconsistencies worth a look.
+
+The agent proposes a fix for each problem and changes nothing until you approve. Every command that writes data also runs the check at the end, so problems in the files it just touched are fixed right away.
 
 ---
 
@@ -215,8 +238,11 @@ Builds sections for blockers, overdue, in-progress, due this week, and new/unass
    ---
    type: project
    status: active
+   health: on-track       # on-track | at-risk | off-track — or leave empty
    owners: [Ana]          # project owner(s); [Ana, Bob] for co-ownership, [] for unassigned
    summary: Brief one-line summary of the project
+   start_date: 2026-02-01
+   target_date: 2026-06-01
    created: 2026-02-19
    links: []
    ---
@@ -250,6 +276,20 @@ links: [{label: "Jira board", url: "https://jira.example.com/ALPHA"}, {label: "C
 
 The `label` is the display text used in reports (rendered as `[label](url)`).
 
+### Setting a project's schedule and health
+
+Edit `project.md` front matter, or use the update command ("project alpha is at risk — vendor delay", "target date for project alpha is June 1"):
+```yaml
+start_date: 2026-02-01
+target_date: 2026-06-01
+health: at-risk        # on-track | at-risk | off-track
+```
+
+- **Health** is your call — the agent records it but never sets or changes it on its own. Dashboards show it as 🟢 on-track, 🟡 at-risk, or 🔴 off-track (`—` when empty).
+- When `target_date` has passed and the project isn't `completed`, dashboards mark the target with ⚠️, and `/check` warns if health still says on-track.
+- **Progress** is calculated, not stored: done ÷ (all tasks − cancelled), across the project's streams and project-level tasks, archived tasks included.
+- Keep `### Key Dates` in the body for narrative milestones; the dashboards and timeline read the front-matter dates.
+
 ### Putting a project on hold
 
 Edit `project.md` front matter:
@@ -268,7 +308,7 @@ Update `data/projects/_index.md`. Completed tasks within the project remain as-i
 
 ### Archiving a project
 
-Set status to `completed`. The project folder stays in place. Dashboard scripts skip `done` tasks but still list the project. Use the `/archive` command to move old completed tasks to `data/archive/`.
+Set status to `completed`. The project folder stays in place. Dashboard scripts skip closed (done or cancelled) tasks but still list the project. Use the `/archive` command to move old closed tasks to `data/archive/`.
 
 ---
 
@@ -290,8 +330,11 @@ Set status to `completed`. The project folder stays in place. Dashboard scripts 
    type: stream
    project: project-alpha
    status: active
+   health:                # on-track | at-risk | off-track — or leave empty
    owners: [Ana]          # stream owner(s); [Ana, Bob] for co-ownership, [] for unassigned
    summary: API migration and new endpoint development
+   start_date: 2026-02-15
+   target_date: 2026-04-30
    created: 2026-02-19
    links: []
    ---
@@ -303,6 +346,8 @@ Set status to `completed`. The project folder stays in place. Dashboard scripts 
    ```
 
 The stream's `owners` array works exactly like a project's — team-member `first_name` values, multiple names for co-ownership, independent of task ownership. Reassign with `/update` (e.g., "make Ana and Bob co-owners of the backend stream in project alpha") or by editing the front matter.
+
+Streams have their own `start_date`, `target_date`, and `health`, which work exactly like a project's (see [Setting a project's schedule and health](#setting-a-projects-schedule-and-health)). Stream progress counts only that stream's tasks. `/check` warns when a stream's target is after its project's target.
 
 ### Stream abbreviations for task IDs
 
@@ -353,13 +398,17 @@ Use the new-task command with a natural language description (see above).
    type: task
    project: project-alpha
    stream: backend-api
-   owner: Ana
+   owners: [Ana]
+   completion_mode: any
    status: todo
    priority: medium
+   start_date: 2026-02-24
    due_date: 2026-03-01
    created: 2026-02-19
    completed_date:
+   cancelled_date:
    tags: [development]
+   blocked_by: []
    links: []
    source_meeting:
    ---
@@ -381,6 +430,25 @@ completed_date: 2026-02-19
 ```
 
 The `completed_date` is what dashboards use to track when work was finished. Always set it to the actual completion date.
+
+### Cancelling a task
+
+When work is dropped rather than finished, cancel it instead of marking it done, so it doesn't inflate "completed" numbers:
+```
+"Cancel ALPHA-002 — client dropped the feature"
+```
+
+Or edit the front matter — change **both** fields — and note the reason:
+```yaml
+status: cancelled
+cancelled_date: 2026-02-19
+```
+```markdown
+### Updates
+- 2026-02-19: Cancelled — client dropped the feature
+```
+
+Cancelled tasks are closed: they drop out of open-task lists and progress percentages, and the weekly report lists them under "Cancelled This Week". If other tasks list the cancelled one in `blocked_by`, the agent points them out — they may need rethinking, not just unblocking. To reopen a closed task, set its status back to `todo`/`in-progress`/`blocked` and clear `completed_date` / `cancelled_date`.
 
 ### Blocking a task
 
@@ -435,9 +503,9 @@ priority: high    # critical | high | medium | low
 
 ### Reassigning a task
 
-Change the `owner` field to another team member's `first_name`:
+Change the `owners` array to another team member's `first_name`:
 ```yaml
-owner: Carlos
+owners: [Carlos]
 ```
 
 ### Adding or changing a due date
@@ -450,6 +518,15 @@ To remove a due date, clear the value:
 ```yaml
 due_date:
 ```
+
+### Adding a start date
+
+Use `start_date` when work shouldn't begin right away:
+```yaml
+start_date: 2026-03-10    # must not be after due_date
+```
+
+The today dashboard leaves `todo` tasks with a future `start_date` out of "Not Started" and says how many it skipped, so your daily list shows only what you can work on now. On the timeline, task bars run from `start_date` (or `created` if there isn't one) to `due_date`.
 
 ### Adding tags
 
@@ -484,16 +561,16 @@ source_meeting: data/meetings/notes/2026/02/2026-02-19-sprint-review.md
 
 This is set automatically by the process-meeting command but can be added manually too.
 
-### Archiving completed tasks
+### Archiving closed tasks
 
-Use the `/archive` command to move old completed tasks out of the active project folders:
+Use the `/archive` command to move old closed (done or cancelled) tasks out of the active project folders:
 
 ```
 "Archive tasks done more than 30 days ago"
 "Archive project-alpha tasks older than 14 days"
 ```
 
-Archived tasks are moved to `data/archive/<project-slug>/YYYY/` (year from `completed_date`). Dashboards only scan `data/projects/`, so archived tasks disappear from all views automatically. The task files are unchanged — you can move them back if needed.
+Archived tasks are moved to `data/archive/<project-slug>/YYYY/` (year from `completed_date` or `cancelled_date`). They disappear from all task lists, but still count toward project and stream progress, and their IDs are never reused for new tasks. The task files are unchanged — you can move them back if needed.
 
 ---
 
@@ -772,25 +849,30 @@ You can respond per-entity or in bulk (e.g., "approve all", "skip 1, approve the
 
 ### Running dashboards
 
-All four dashboards are script-powered for speed and consistency:
+The dashboards are script-powered for speed and consistency:
 
 | Command | What it shows |
 |---------|--------------|
-| today | Overdue, due today, in-progress, blocked, not started tasks |
-| this_week | All projects/streams/tasks in table format |
-| my-team | Tasks grouped by team member with days-open count |
-| weekly-report | Completed, in-progress, blocked, new tasks this week |
+| today | Overdue, due today, in-progress, blocked, not started tasks (todo tasks with a future `start_date` are held back) |
+| this_week | All projects/streams/tasks in table format, with each project's and stream's health, dates, and progress |
+| my-team | Tasks grouped by team member with days-open count, plus project/stream health, target, and progress |
+| weekly-report | Completed, cancelled, in-progress, blocked, new tasks this week, plus project/stream health, target, and progress |
+| owner-report | Projects & streams a person owns, with health, target, progress, and open/blocked counts |
+| timeline | Mermaid Gantt chart for one project (`timeline <slug>`) or the portfolio — used by `/status` |
+| check | Data validation report (read-only, not saved) |
 
 ### Saved snapshots
 
-Every dashboard run saves a snapshot to `data/reports/`:
+Every dashboard run (except `check`) saves a snapshot to `data/reports/`:
 
 ```
 data/reports/
-├── daily/2026/02/2026-02-19.md              ← /today
-├── weekly/2026/02/2026-02-16.md             ← /this_week (Monday date)
-├── team/2026/02/2026-02-19.md               ← /my-team
-└── weekly-report/2026/02/2026-02-16.md      ← /weekly-report (Monday date)
+├── daily/2026/02/2026-02-19-daily.md                      ← /today
+├── weekly/2026/02/2026-02-16-weekly.md                    ← /this_week (Monday date)
+├── team/2026/02/2026-02-19-team.md                        ← /my-team
+├── weekly-report/2026/02/2026-02-16-weekly-report.md      ← /weekly-report (Monday date)
+├── owner/2026/02/2026-02-19-ana-owner.md                  ← /owner-report
+└── timeline/2026/02/2026-02-19-project-alpha-timeline.md  ← timeline (via /status)
 ```
 
 Running the same command twice on the same day overwrites that day's snapshot.
@@ -808,9 +890,12 @@ python scripts/dashboard.py today
 python scripts/dashboard.py this_week
 python scripts/dashboard.py my_team
 python scripts/dashboard.py weekly_report
+python scripts/dashboard.py owner Ana
+python scripts/dashboard.py timeline project-alpha   # or no slug for the portfolio
+python scripts/dashboard.py check                    # exits 1 if it finds errors
 ```
 
-Output goes to stdout and is saved to `data/reports/` simultaneously.
+Output goes to stdout and is saved to `data/reports/` simultaneously (except `check`, which only prints).
 
 ---
 
@@ -838,8 +923,10 @@ Output goes to stdout and is saved to `data/reports/` simultaneously.
 ### End of week
 
 1. Run the weekly-report dashboard for a summary of the week
-2. Mark completed tasks as `done` (with `completed_date`)
+2. Mark completed tasks as `done` (with `completed_date`), and cancel anything that was dropped
 3. Review blocked tasks — can any be unblocked?
+4. Review project and stream health — still accurate given this week?
+5. Run `/check` and fix anything it flags
 
 ### When a task is done
 
@@ -923,11 +1010,15 @@ plainpm/
 │   │           └── notes/
 │   │               └── YYYY/MM/     # Area meeting notes by year/month
 │   ├── team/                        # One .md per team member
+│   ├── archive/                     # Archived closed tasks
+│   │   └── <project-slug>/YYYY/     # (_standalone/ for standalone tasks)
 │   └── reports/                     # Dashboard snapshots
 │       ├── daily/YYYY/MM/
 │       ├── weekly/YYYY/MM/
 │       ├── team/YYYY/MM/
-│       └── weekly-report/YYYY/MM/
+│       ├── weekly-report/YYYY/MM/
+│       ├── owner/YYYY/MM/
+│       └── timeline/YYYY/MM/
 ```
 
 Tasks are organized into year subfolders (e.g., `tasks/2026/`). Meeting notes, transcripts, and reports are organized into year/month subfolders (e.g., `2026/02/`) to keep folders manageable at high volume. Dashboard scripts use `rglob` and scan all subfolders automatically.
@@ -936,9 +1027,19 @@ Tasks are organized into year subfolders (e.g., `tasks/2026/`). Meeting notes, t
 
 | Context | Values |
 |---------|--------|
-| Tasks | `todo` → `in-progress` → `done` (or `blocked` at any point) |
+| Tasks | `todo` → `in-progress` → `done` (or `blocked` at any point; `cancelled` when dropped) |
 | Projects | `active` → `on-hold` or `completed` |
 | Streams | `active` → `on-hold` or `completed` |
+
+`done` and `cancelled` are the closed task statuses; they carry `completed_date` and `cancelled_date` respectively.
+
+### Health values (projects & streams)
+
+| Value | Icon | Meaning |
+|-------|------|---------|
+| `on-track` | 🟢 | Expected to hit the target date |
+| `at-risk` | 🟡 | Could slip without action |
+| `off-track` | 🔴 | Will miss the target without a change of plan |
 
 ### Priority values
 

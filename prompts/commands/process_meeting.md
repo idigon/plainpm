@@ -89,6 +89,7 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
       - Stream tasks: `PROJECT-STREAM-NNN` (e.g., `ALPHA-BE-002`). Stream abbreviation = uppercase first letters of each word in stream folder name, 2-4 chars.
       - Project-level tasks: `PROJECT-NNN` (e.g., `ALPHA-003`).
       - Standalone tasks: `TASK-NNN` (e.g., `TASK-001`). Scan `data/tasks/` for existing IDs.
+      - Also scan the archive for the same scope (`data/archive/<slug>/**`, or `data/archive/_standalone/**` for standalone tasks) so an archived task's ID is never reused.
    c. Create the task `.md` file using `templates/task.md`:
       - `id`: the generated ID
       - `project`: project slug (or empty for standalone tasks)
@@ -189,5 +190,7 @@ Do NOT aggressively summarize. A longer, complete meeting note is far more valua
       (e.g., `roles` | project | approved / `roles / phase-1` | stream | edited / `ROLES-004` | task | skipped)
     - Note which action items had no task created (external attendees)
     - Any questions about ambiguous attendees
+
+12. **Validate**: run `python scripts/dashboard.py check`. If it reports errors or warnings in any file you created or changed (meeting notes, new tasks, new projects/streams/areas, updated entities), fix them before finishing (ask the user when a fix needs a decision). Don't touch other files — if the check reports issues elsewhere, just mention how many and suggest `/check`.
 
 $ARGUMENTS

@@ -54,6 +54,7 @@ Then inform the user:
 - **Stream**: match to existing stream within the project; if unclear, ask. Leave empty for project-level or standalone tasks.
 - **Priority**: default `medium` unless specified
 - **Due date**: parse relative dates ("Friday" → next Friday, "tomorrow" → tomorrow, "next week" → next Monday). Format as YYYY-MM-DD. Leave empty if not mentioned.
+- **Start date**: only if the user says when work begins ("starting Monday", "from March 1", "kick off next week"). Same date parsing; format as YYYY-MM-DD. Leave empty if not mentioned. It must not be after the due date — if it would be, ask.
 - **Tags**: extract if mentioned, otherwise leave empty
 - **Blocked by**: if the user mentions dependencies (e.g., "after ALPHA-BE-001", "depends on ALPHA-002", "blocked by ALPHA-001"), add those IDs to the `blocked_by` array. Verify referenced IDs exist.
 
@@ -63,14 +64,16 @@ Then inform the user:
    - For stream tasks: scan ALL year folders under `data/projects/<slug>/streams/<stream>/tasks/` for existing IDs, increment from the highest found across all years. ID format: `PROJECT-STREAM-NNN`.
    - For project-level tasks: scan ALL year folders under `data/projects/<slug>/tasks/` for existing IDs, increment from the highest found across all years. ID format: `PROJECT-NNN`.
    - For standalone tasks: scan ALL year folders under `data/tasks/` for existing IDs, increment from the highest found across all years. ID format: `TASK-NNN`.
+   - **Also scan the archive** for the same scope — `data/archive/<slug>/**` for project and stream tasks, `data/archive/_standalone/**` for standalone tasks — so an archived task's ID is never reused.
    - Stream abbreviation: derive from stream folder name (e.g., `backend-api` → `BE`, `design` → `DES`, `frontend` → `FE`). Use first letters of each word, uppercase, 2-4 chars.
 
 5. Create necessary directories if they don't exist (project folder, tasks/YYYY folder, stream folder).
-   - If a **new stream** is being created (`stream.md` from template), set its `owners` array. If the user named an owner for the stream, use it; otherwise ask who owns the stream (accepting "unassigned" / leaving `owners: []`). Owner names must match a team member's `first_name`. Note: the task's owner and the stream's owner are independent — don't assume they're the same.
+   - If a **new stream** is being created (`stream.md` from template), set its `owners` array. If the user named an owner for the stream, use it; otherwise ask who owns the stream (accepting "unassigned" / leaving `owners: []`). Owner names must match a team member's `first_name`. Note: the task's owner and the stream's owner are independent — don't assume they're the same. If the user mentioned the stream's start or target date, set `start_date` / `target_date`; otherwise leave them empty (don't ask). Leave `health` empty unless the user stated it.
 
 6. If a new project is being created:
    - Create `data/projects/<slug>/project.md` from template
    - Set the project's `owners` array: if the user named a project owner, use it; otherwise ask who owns the project (accepting "unassigned"). Owner names must match a team member's `first_name`, and are independent of the task's owner.
+   - If the user mentioned the project's start or target date, set `start_date` / `target_date`; otherwise leave them empty (don't ask). Leave `health` empty unless the user stated it.
    - Add entry to `data/projects/_index.md`
 
 7. Create the task file with proper YAML front matter:
@@ -81,6 +84,8 @@ Then inform the user:
    - Standalone task path: `data/tasks/YYYY/TASK-ID.md`
 
 8. Show the user the created task with its full details and file path.
+
+9. **Validate**: run `python scripts/dashboard.py check`. If it reports errors or warnings in any file you created or changed (the task, and any new project, stream, or `_index.md` entry), fix them before finishing (ask the user when a fix needs a decision). Don't touch other files — if the check reports issues elsewhere, just mention how many and suggest `/check`.
 
 ### If anything is ambiguous:
 - Ask the user to clarify before creating the file

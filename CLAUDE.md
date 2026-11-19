@@ -38,8 +38,15 @@ Tags are freeform strings in the `tags` array. Common categories:
 
 ## Status Values
 
-Task statuses: `todo` | `in-progress` | `blocked` | `done`
+Task statuses: `todo` | `in-progress` | `blocked` | `done` | `cancelled`
 Project/stream statuses: `active` | `on-hold` | `completed`
+
+`done` and `cancelled` are both **closed** statuses; the other three are **open**.
+
+- Use `cancelled` for work that was dropped and won't be done. It keeps the task's history without counting it as completed: cancelled tasks are left out of open-task counts, "completed" metrics, and progress percentages, and get their own "Cancelled This Week" section in the weekly report.
+- Setting `status: done` sets `completed_date`; setting `status: cancelled` sets `cancelled_date` (both YYYY-MM-DD, today). Record the reason under `### Updates`, e.g. `- 2026-11-19: Cancelled — client dropped the feature`.
+- Cancelling goes through `/update` ("cancel ALPHA-002"), never `/done`.
+- Reopening a closed task (back to `todo`, `in-progress`, or `blocked`) clears `completed_date` and `cancelled_date`.
 
 ## Priority Values
 
@@ -51,6 +58,20 @@ Project/stream statuses: `active` | `on-hold` | `completed`
 | Low | 🟢 | `low` |
 
 Always display priority as icon + string (e.g., "🟠 high").
+
+## Health Values
+
+Projects and streams (not tasks) can carry a `health` field:
+
+| Health | Icon | Label |
+|--------|------|-------|
+| On track | 🟢 | `on-track` |
+| At risk | 🟡 | `at-risk` |
+| Off track | 🔴 | `off-track` |
+
+- Health is the user's judgment. Set it only when the user states it (via `/update`, e.g. "project alpha is at risk", or by editing front matter). The agent never infers or changes health on its own.
+- Leave it empty when not assessed — dashboards show `—`.
+- Always display as icon + label (e.g., "🟡 at-risk"), so it can't be confused with priority icons.
 
 ## Task ID Convention
 
@@ -132,6 +153,32 @@ owners: [Alice, Bob]
 - The **team dashboard (`my_team`)** and **weekly report (`weekly_report`)** show an Owner column in their Project Status and Stream Status tables. Co-owners are joined with ` / ` (e.g., `Alice / Bob`); an unassigned project/stream shows `Unassigned`.
 - The `/status` report shows the owner(s) for the project and for each stream.
 
+## Project & Stream Schedule, Health, and Progress
+
+Projects and streams can declare a schedule and a health in their front matter:
+
+```yaml
+start_date: 2026-10-01
+target_date: 2026-12-15
+health: at-risk
+```
+
+- `start_date` / `target_date`: optional, YYYY-MM-DD. `start_date` must not be after `target_date`. A project or stream is **late** when its `target_date` has passed and its status isn't `completed` — dashboards mark the target with ⚠️.
+- `health`: see **Health Values**.
+- **Progress** is calculated, never stored: done ÷ (all tasks − cancelled), shown as `60% (6/10)`. A project's progress rolls up its project-level tasks and all its streams. Archived tasks (`data/archive/`) are included, so archiving finished work doesn't change progress.
+- Where they show up: `this_week` (project/stream headers), `my_team` and `weekly_report` (Health, Target, and Progress columns in the Project/Stream Status tables), the owner report, `/status`, and the timeline.
+- `### Key Dates` in `project.md` remains for narrative milestones; the machine-readable dates are the front-matter fields.
+
+## Timeline (Gantt)
+
+`python scripts/dashboard.py timeline <project-slug>` prints a Mermaid Gantt chart for one project; with no slug it charts the portfolio. It renders in GitHub, VS Code's Markdown preview (with Mermaid support), Obsidian, and most Markdown viewers.
+
+- **Project timeline**: a bar for the project (`start_date` or `created` → `target_date`) with a target milestone, a bar per stream, and a bar per task. Task bars run from `start_date` (or `created`) to `due_date`. Done tasks end on their `completed_date`.
+- **Portfolio timeline**: one bar per non-completed project and per stream that has a `target_date`.
+- Bar styles: done = grey; in progress = highlighted; blocked, overdue, late, or off-track = red.
+- Left off the chart, with a note: open tasks without a `due_date`, cancelled tasks, tasks completed more than 30 days ago, and projects/streams without a `target_date`.
+- `/status` embeds the timeline. Snapshots go to `data/reports/timeline/YYYY/MM/YYYY-MM-DD-<slug|portfolio>-timeline.md`.
+
 ## Dependencies
 
 Tasks can declare dependencies via a `blocked_by` array of task IDs:
@@ -140,16 +187,20 @@ Tasks can declare dependencies via a `blocked_by` array of task IDs:
 blocked_by: [ALPHA-BE-001, ALPHA-003]
 ```
 
-- When all tasks in `blocked_by` are `done`, the dependency is resolved.
+- When all tasks in `blocked_by` are closed (`done` or `cancelled`), the dependency is resolved.
 - Setting `blocked_by` on a task does **not** automatically set its status to `blocked` — that's still a manual decision.
-- When `/done` completes a task, it checks if any other open tasks have that ID in `blocked_by`. If a dependency is now fully resolved (all `blocked_by` IDs are done), the agent notifies the user and suggests unblocking.
+- When `/done` completes a task, it checks if any other open tasks have that ID in `blocked_by`. If a dependency is now fully resolved (all `blocked_by` IDs are closed), the agent notifies the user and suggests unblocking.
+- When `/update` cancels a task, it tells the user about every open task that depends on it — a cancelled blocker usually means the dependent task needs rethinking, not just unblocking.
 - Dashboards show `blocked_by` IDs next to blocked tasks for visibility.
 
 ## Dates
 
 - Format: `YYYY-MM-DD`
 - `due_date`: optional — tasks can have no due date
+- `start_date` (tasks): optional — when work is planned to begin; must not be after `due_date`. The `today` dashboard leaves `todo` tasks whose `start_date` is still in the future out of "Not Started" (it shows how many it skipped). Task bars on the timeline start here.
 - `completed_date`: set automatically when status changes to `done`
+- `cancelled_date`: set automatically when status changes to `cancelled`
+- `start_date` / `target_date` (projects & streams): optional — see **Project & Stream Schedule, Health, and Progress**
 - `created`: set when task/project/stream is created
 
 ## Same-Day Updates
@@ -274,6 +325,8 @@ python scripts/dashboard.py this_week      # Weekly dashboard
 python scripts/dashboard.py my_team        # Team workload + days open
 python scripts/dashboard.py weekly_report  # Week summary
 python scripts/dashboard.py owner <name>   # Projects/streams owned by a person
+python scripts/dashboard.py timeline [slug] # Mermaid Gantt for a project (or the portfolio)
+python scripts/dashboard.py check          # Validate all data files (read-only, not saved)
 ```
 
 The slash commands for these dashboards invoke the script and display its output.
@@ -287,8 +340,20 @@ Every run automatically saves a snapshot to `data/reports/`:
 | `my_team` | `data/reports/team/YYYY/MM/YYYY-MM-DD-team.md` | Today |
 | `weekly_report` | `data/reports/weekly-report/YYYY/MM/YYYY-MM-DD-weekly-report.md` | Monday of the week |
 | `owner <name>` | `data/reports/owner/YYYY/MM/YYYY-MM-DD-<owner-slug>-owner.md` | Today |
+| `timeline [slug]` | `data/reports/timeline/YYYY/MM/YYYY-MM-DD-<slug\|portfolio>-timeline.md` | Today |
 
-Running the same command twice on the same day overwrites the previous snapshot for that date.
+Running the same command twice on the same day overwrites the previous snapshot for that date. `check` is the exception: it only prints, never saves, and exits with code 1 when it finds errors.
+
+## Data Validation
+
+`python scripts/dashboard.py check` (the `/check` command) validates every file under `data/`: front-matter syntax, allowed values, status/date consistency, owners against the roster, task location vs. `project`/`stream` fields, IDs (format, scope prefix, duplicates across active and archived tasks), dependencies (unknown IDs, cycles, cancelled blockers), multi-owner `completions`, and schedule consistency (late projects still marked on-track, tasks due after their stream's or project's target). **Errors** break dashboards or commands; **warnings** are inconsistencies worth a look.
+
+**After any command that writes data** (`new-task`, `new-note`, `update`, `done`, `process-meeting`, `archive`), run `python scripts/dashboard.py check`. If it reports errors or warnings in files that command created or changed, fix them before finishing (ask the user when a fix needs a decision, like a missing date). Don't silently fix pre-existing issues in other files — mention the counts and suggest `/check`.
+
+**Format rules the check enforces** (plainpm's parser is deliberately simple):
+- Front matter values must be on one line. Lists are inline: `owners: [Ana, Bob]`, not one `- Ana` per line — multi-line YAML is silently dropped by the dashboards.
+- Files are UTF-8 without a byte-order mark (BOM).
+- New task IDs must never reuse an archived task's ID — scan `data/archive/` too when picking the next number.
 
 ## Commands
 
@@ -308,9 +373,10 @@ Command prompts live in `prompts/commands/`. Each file contains the full instruc
 | done | `prompts/commands/done.md` | Mark task(s) as done |
 | update | `prompts/commands/update.md` | Batch update tasks, projects, and streams from natural language |
 | agenda | `prompts/commands/agenda.md` | Generate meeting agenda from open tasks |
-| archive | `prompts/commands/archive.md` | Archive old completed tasks |
+| archive | `prompts/commands/archive.md` | Archive old closed (done or cancelled) tasks |
+| check | `prompts/commands/check.md` | Validate all data files and propose fixes |
 
-In Claude Code these are wired as slash commands via `.claude/commands/`. Seven of them — `new-task`, `update`, `done`, `process-meeting`, `archive`, `status`, and `new-note` — are **also** exposed as skills under `.claude/skills/`, so they auto-load when the user describes the action in natural language (e.g., "Ana needs to fix the login bug by Friday" → `new-task`). Slash commands and skills coexist and share the same source-of-truth prompt files in `prompts/commands/`. The four dashboards (`today`, `this_week`, `my_team`, `weekly_report`) and `agenda` remain slash-only since they're deliberate, explicit invocations.
+In Claude Code these are wired as slash commands via `.claude/commands/`. Seven of them — `new-task`, `update`, `done`, `process-meeting`, `archive`, `status`, and `new-note` — are **also** exposed as skills under `.claude/skills/`, so they auto-load when the user describes the action in natural language (e.g., "Ana needs to fix the login bug by Friday" → `new-task`). Slash commands and skills coexist and share the same source-of-truth prompt files in `prompts/commands/`. The four dashboards (`today`, `this_week`, `my_team`, `weekly_report`), `agenda`, and `check` remain slash-only since they're deliberate, explicit invocations.
 
 Commands can be invoked either explicitly (e.g., `/owner-report`) or by **natural language** — every agent routes plain-language requests to the right prompt via its own request→prompt table (`AGENTS.md`, `.github/copilot-instructions.md`, `.cursor/rules/plainpm.mdc`, `.windsurf/rules/plainpm.md`) and the Commands table above. This keeps the behavior agent-agnostic; a single `prompts/commands/*.md` file is the source of truth for each command. Do **not** add Claude-only `.claude/skills/` entries for these — that would work only in Claude Code and duplicate the prompt.
 
